@@ -16,6 +16,10 @@
     .chip-toggle{background:#222;border-radius:999px;padding:4px;display:inline-flex;gap:6px}
     .chip-toggle button{border:none;padding:8px 14px;border-radius:999px;background:#333;color:#bbb;cursor:pointer;font-weight:700;transition:.15s transform ease,.15s background ease}
     .chip-toggle button.active{background:#00d4ff;color:#111;transform:translateY(-1px)}
+    /* 平日/假日這組用白底，選取時變藍 */
+    .chip-toggle.plan{background:transparent;padding:0}
+    .chip-toggle.plan button{background:#fff;color:#111;border:1px solid #444}
+    .chip-toggle.plan button.active{background:#00d4ff;color:#111;border-color:#00d4ff}
     .subtle{font-size:12px;color:#aaa}
     .progress-title{font-size:15px;color:#00d4ff;margin:8px 0 6px}
     .progress-dual{display:grid;grid-template-columns:1fr;gap:10px;margin-bottom:6px}
@@ -92,46 +96,46 @@
 
   <h3 style="margin:8px 0 4px">一鍵分配 ⏱</h3>
   <div class="row" style="margin-bottom:6px">
-    <div class="chip-toggle" aria-label="選擇分配方案">
-      <!-- 去掉硬寫 active，交給 JS 管 -->
+    <div class="chip-toggle plan" aria-label="選擇分配方案">
       <button type="button" id="alloc-weekday" onclick="setAllocPlan('weekday')">平日</button>
       <button type="button" id="alloc-holiday" onclick="setAllocPlan('holiday')">假日</button>
     </div>
   </div>
-  <div id="alloc-preview" class="preview">當前方案：—</div>
+  <div id="alloc-preview" class="preview">—</div>
   <div class="subtle">平日＝🌟20 分＋🎮20 分 ｜ 假日＝🌟30 分＋🎮60 分</div>
   <div class="row" style="margin-top:8px">
     <button type="button" class="btn primary" onclick="applyAllocation()">將當前方案套用到勾選的小孩</button>
   </div>
 </div>
 
-<!-- 進度條最大值 -->
-<div id="form-section">
-  <h2>設定進度條比例 🛠️</h2>
-  <input type="number" id="maxMinutesInput" placeholder="🔧輸入每條最大分鐘數（單條）">
-  <button type="button" onclick="setMaxMinutes()">設定進度條最大時間</button>
-  <div class="subtle">每位小孩顯示兩條（🌟/🎮），此值為「每條」上限。</div>
-</div>
-
 <script>
   const REFRESH_DELAY = 1000;
-  const API_URL = "https://script.google.com/macros/s/AKfycbzk2xXQLv3_e0oktEMZdQjXwkVG9JU6HTolS3dhRH09FPEiHn6dvyAUlUlQZpBAT0rG/exec"; // 換成你的 /exec
+  const API_URL = "https://script.google.com/macros/s/AKfycbzk2xXQLv3_e0oktEMZdQjXwkVG9JU6HTolS3dhRH09FPEiHn6dvyAUlUlQZpBAT0rG/exec";
+
+  const PLAN_LIMITS = { weekday:{sel:20, reg:20}, holiday:{sel:30, reg:60} };
 
   let currentSelectedTimes = {};
   let currentRegularTimes  = {};
   let updatingChildren = {};
-  let maxMinutes = localStorage.getItem('maxMinutes') ? parseInt(localStorage.getItem('maxMinutes')) : 120;
   let familyFilter = localStorage.getItem('familyFilter') || '';
   let allocPlan = localStorage.getItem('allocPlan') || 'weekday';
+  let selMax = parseInt(localStorage.getItem('selMax')||'0',10);
+  let regMax = parseInt(localStorage.getItem('regMax')||'0',10);
+  if(!selMax || !regMax){ // 初次進站，用目前方案預設上限
+    selMax = PLAN_LIMITS[allocPlan].sel;
+    regMax = PLAN_LIMITS[allocPlan].reg;
+    localStorage.setItem('selMax', selMax);
+    localStorage.setItem('regMax', regMax);
+  }
   const activeType = {}; // { name: 'selected' | 'regular' }
 
   document.addEventListener('DOMContentLoaded', ()=>{
     fetchLeaderboard();
-    syncAllocPlanButtons();     // 設定 active 樣式
-    updateAllocPreview();       // 顯示「當前方案」
+    syncAllocPlanButtons();
+    updateAllocPreview();
   });
 
-  // 家庭篩選
+  /* 家庭篩選 */
   function setFamilyFilter(f){ familyFilter=f; localStorage.setItem('familyFilter',f); showLoading(); fetchLeaderboard(); updateFilterButtons(); }
   function clearFamilyFilter(){ familyFilter=''; localStorage.removeItem('familyFilter'); showLoading(); fetchLeaderboard(); updateFilterButtons();}
   function updateFilterButtons(){
@@ -142,12 +146,12 @@
     }
   }
 
-  // 一鍵分配：切換＋視覺回饋
+  /* 一鍵分配：切換＋視覺回饋（預設白、選中藍） */
   function setAllocPlan(plan){
     allocPlan = plan;
     localStorage.setItem('allocPlan', plan);
     syncAllocPlanButtons();
-    updateAllocPreview(true); // true=加一點動畫提示
+    updateAllocPreview(true);
   }
   function syncAllocPlanButtons(){
     const w = document.getElementById('alloc-weekday');
@@ -159,17 +163,12 @@
   }
   function updateAllocPreview(bump){
     const el = document.getElementById('alloc-preview');
-    const txt = (allocPlan==='weekday')
-      ? '當前方案：平日（🌟 20 分 ＋ 🎮 20 分）'
-      : '當前方案：假日（🌟 30 分 ＋ 🎮 60 分）';
-    el.textContent = txt;
-    if(bump){
-      el.style.transform = 'scale(1.04)';
-      setTimeout(()=>{ el.style.transform='none'; },150);
-    }
+    const lim = PLAN_LIMITS[allocPlan];
+    el.textContent = `當前方案：${allocPlan==='weekday'?'平日':'假日'}（🌟 ${lim.sel} 分｜🎮 ${lim.reg} 分）；進度條上限：🌟 ${selMax}｜🎮 ${regMax}`;
+    if(bump){ el.style.transform='scale(1.04)'; setTimeout(()=>el.style.transform='none',150); }
   }
 
-  // 載入
+  /* 載入 */
   function showLoading(){
     document.getElementById('leaderboard').innerHTML = `
       <div style="margin:20px">
@@ -217,8 +216,8 @@
       currentRegularTimes[entry.Name]  = reg;
       if(!activeType[entry.Name]) activeType[entry.Name]='regular';
 
-      const selPct = Math.min(100, (sel / maxMinutes) * 100);
-      const regPct = Math.min(100, (reg / maxMinutes) * 100);
+      const selPct = Math.min(100, selMax ? (sel / selMax) * 100 : 0);
+      const regPct = Math.min(100, regMax ? (reg / regMax) * 100 : 0);
 
       const cash = pts * 5;
       const canSel = pts * 3;
@@ -237,14 +236,14 @@
 
         <div class="progress-dual">
           <div>
-            <div class="progress-title">🌟 精選時間</div>
+            <div class="progress-title">🌟 精選時間（上限 ${selMax} 分）</div>
             <div class="bar-wrap">
               <div class="fill" style="width:${selPct}%"></div>
               <div class="bar-text">${sel} 分鐘</div>
             </div>
           </div>
           <div>
-            <div class="progress-title">🎮 一般時間</div>
+            <div class="progress-title">🎮 一般時間（上限 ${regMax} 分）</div>
             <div class="bar-wrap">
               <div class="fill" style="width:${regPct}%"></div>
               <div class="bar-text">${reg} 分鐘</div>
@@ -255,8 +254,8 @@
         <div class="control-row">
           <div class="left">
             <div class="chip-toggle" aria-label="操作目標">
-              <button type="button" class="${opSelActive?'active':''}" onclick="setOpType('${entry.Name}','selected')">🌟 精選</button>
-              <button type="button" class="${opRegActive?'active':''}" onclick="setOpType('${entry.Name}','regular')">🎮 一般</button>
+              <button type="button" data-type="selected" class="${opSelActive?'active':''}" onclick="setOpType('${entry.Name}','selected')">🌟 精選</button>
+              <button type="button" data-type="regular"  class="${opRegActive?'active':''}" onclick="setOpType('${entry.Name}','regular')">🎮 一般</button>
             </div>
           </div>
           <div class="right">
@@ -266,7 +265,7 @@
 
         <div class="convert-group">
           <button type="button" class="btn" onclick="convertRegularToPoints('${entry.Name}')">🎮 ➔ ⭐</button>
-          <button type="button" class="btn" onclick="convertPointsToTime('${entry.Name}')">⭐ ➔ ${opSelActive?'🌟':'🎮'}</button>
+          <button type="button" class="btn convert-pts" onclick="convertPointsToTime('${entry.Name}')">⭐ ➔ ${opSelActive?'🌟':'🎮'}</button>
         </div>
 
         ${updatingChildren[entry.Name] ? '<div class="shimmer-effect"></div>' : ''}
@@ -290,9 +289,21 @@
     });
   }
 
+  /* 精選/一般切換：立即更新卡片（不重新抓資料） */
   function setOpType(name, type){
     activeType[name]=type;
-    fetchLeaderboard(); // 重繪以更新該卡片樣式與「⭐→📺」按鈕文案
+    const card = document.getElementById(`card-${name}`);
+    if(!card) return;
+    const btnSel = card.querySelector('.chip-toggle button[data-type="selected"]');
+    const btnReg = card.querySelector('.chip-toggle button[data-type="regular"]');
+    if(btnSel && btnReg){
+      btnSel.classList.toggle('active', type==='selected');
+      btnReg.classList.toggle('active', type==='regular');
+    }
+    const convertBtn = card.querySelector('.convert-group .convert-pts');
+    if(convertBtn){
+      convertBtn.textContent = `⭐ ➔ ${type==='selected'?'🌟':'🎮'}`;
+    }
   }
 
   function startShimmerEffect(name){
@@ -357,8 +368,15 @@
   function applyAllocation(){
     const checked=[...document.querySelectorAll('#name-list input[type="checkbox"]:checked')];
     if(checked.length===0){ alert('請先勾選小孩'); return; }
-    const plan = allocPlan==='weekday' ? {sel:20, reg:20} : {sel:30, reg:60};
-    if(!confirm(`將套用到 ${checked.length} 位：\n🌟 精選 +${plan.sel} 分\n🎮 一般 +${plan.reg} 分`)) return;
+    const plan = PLAN_LIMITS[allocPlan];
+
+    // 自動設定進度條上限（存到 localStorage）
+    selMax = plan.sel; regMax = plan.reg;
+    localStorage.setItem('selMax', selMax);
+    localStorage.setItem('regMax', regMax);
+    updateAllocPreview(true);
+
+    if(!confirm(`將套用到 ${checked.length} 位：\n🌟 精選 +${plan.sel} 分\n🎮 一般 +${plan.reg} 分\n（並將進度條上限設定為 🌟${plan.sel}/🎮${plan.reg}）`)) return;
 
     let done=0;
     checked.forEach(cb=>{
@@ -442,16 +460,10 @@
     };
     submitToApi(payload, ()=>{ setTimeout(fetchLeaderboard, REFRESH_DELAY); alert(`已將 ⭐ ${want} 點換成 ${type==='selected'?'🌟精選':'🎮一般'} ${mins} 分`); });
   }
-
-  function setMaxMinutes(){
-    const v=parseInt(document.getElementById('maxMinutesInput').value.trim(),10);
-    if(isNaN(v)||v<=0){ alert('請輸入有效的分鐘數'); return;}
-    maxMinutes=v; localStorage.setItem('maxMinutes',v); fetchLeaderboard();
-  }
 </script>
 
 <div style="margin-top:60px;font-size:.9em;color:#aaa;text-align:center">
-  Made by Evelyn YT ｜ © 2025/8/31 10:26
+  Made by Evelyn YT ｜ © 2025
 </div>
 
 </body>
