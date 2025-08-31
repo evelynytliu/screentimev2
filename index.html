@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <link rel="icon" href="icon.png" type="image/png">
   <link rel="apple-touch-icon" href="icon.png">
   <title>Points & Screen Time</title>
   <style>
@@ -16,10 +17,6 @@
     .chip-toggle{background:#222;border-radius:999px;padding:4px;display:inline-flex;gap:6px}
     .chip-toggle button{border:none;padding:8px 14px;border-radius:999px;background:#333;color:#bbb;cursor:pointer;font-weight:700;transition:.15s transform ease,.15s background ease}
     .chip-toggle button.active{background:#00d4ff;color:#111;transform:translateY(-1px)}
-    /* 平日/假日這組用白底，選取時變藍 */
-    .chip-toggle.plan{background:transparent;padding:0}
-    .chip-toggle.plan button{background:#fff;color:#111;border:1px solid #444}
-    .chip-toggle.plan button.active{background:#00d4ff;color:#111;border-color:#00d4ff}
     .subtle{font-size:12px;color:#aaa}
     .progress-title{font-size:15px;color:#00d4ff;margin:8px 0 6px}
     .progress-dual{display:grid;grid-template-columns:1fr;gap:10px;margin-bottom:6px}
@@ -75,10 +72,19 @@
   </div>
 </div>
 
-<!-- 家長控制 -->
+<!-- 家長控制（整合方案切換） -->
 <div id="form-section">
   <h2>送出新紀錄 📝</h2>
   <div id="name-list" class="checkbox-group"></div>
+
+  <!-- 方案切換：外觀與精選/一般一致 -->
+  <div class="row" style="margin-top:4px;margin-bottom:0">
+    <div class="chip-toggle" aria-label="選擇分配方案">
+      <button type="button" id="alloc-weekday" onclick="setAllocPlan('weekday')">平日</button>
+      <button type="button" id="alloc-holiday" onclick="setAllocPlan('holiday')">假日</button>
+    </div>
+  </div>
+  <div id="alloc-preview" class="preview">—</div>
 
   <input type="number" id="pointsChange" placeholder="⭐ 點數調整（+/-）">
 
@@ -95,13 +101,6 @@
   <hr style="border:none;height:1px;background:#445;margin:18px 0">
 
   <h3 style="margin:8px 0 4px">一鍵分配 ⏱</h3>
-  <div class="row" style="margin-bottom:6px">
-    <div class="chip-toggle plan" aria-label="選擇分配方案">
-      <button type="button" id="alloc-weekday" onclick="setAllocPlan('weekday')">平日</button>
-      <button type="button" id="alloc-holiday" onclick="setAllocPlan('holiday')">假日</button>
-    </div>
-  </div>
-  <div id="alloc-preview" class="preview">—</div>
   <div class="subtle">平日＝🌟20 分＋🎮20 分 ｜ 假日＝🌟30 分＋🎮60 分</div>
   <div class="row" style="margin-top:8px">
     <button type="button" class="btn primary" onclick="applyAllocation()">將當前方案套用到勾選的小孩</button>
@@ -121,7 +120,7 @@
   let allocPlan = localStorage.getItem('allocPlan') || 'weekday';
   let selMax = parseInt(localStorage.getItem('selMax')||'0',10);
   let regMax = parseInt(localStorage.getItem('regMax')||'0',10);
-  if(!selMax || !regMax){ // 初次進站，用目前方案預設上限
+  if(!selMax || !regMax){
     selMax = PLAN_LIMITS[allocPlan].sel;
     regMax = PLAN_LIMITS[allocPlan].reg;
     localStorage.setItem('selMax', selMax);
@@ -146,11 +145,18 @@
     }
   }
 
-  /* 一鍵分配：切換＋視覺回饋（預設白、選中藍） */
+  /* 一鍵分配：切換（外觀同精選/一般）＋自動預填＆更新預覽 */
   function setAllocPlan(plan){
     allocPlan = plan;
     localStorage.setItem('allocPlan', plan);
     syncAllocPlanButtons();
+
+    // 自動預填兩個欄位
+    const lim = PLAN_LIMITS[plan];
+    document.getElementById('selectedMinutesChange').value = lim.sel;
+    document.getElementById('regularMinutesChange').value  = lim.reg;
+    // 自動填入原因
+    document.getElementById('reason').value = buildTodayReason();
     updateAllocPreview(true);
   }
   function syncAllocPlanButtons(){
@@ -160,6 +166,11 @@
     h.classList.toggle('active', allocPlan==='holiday');
     w.setAttribute('aria-pressed', allocPlan==='weekday');
     h.setAttribute('aria-pressed', allocPlan==='holiday');
+  }
+  function buildTodayReason(){
+    const d = new Date();
+    const wd = ['日','一','二','三','四','五','六'][d.getDay()];
+    return `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()} (${wd}) 當日時間分配`;
   }
   function updateAllocPreview(bump){
     const el = document.getElementById('alloc-preview');
