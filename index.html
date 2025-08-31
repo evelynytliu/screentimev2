@@ -9,16 +9,29 @@
   <style>
     body{font-family:'Poppins',system-ui,-apple-system,Segoe UI,Roboto,'Noto Sans TC',sans-serif;background:#111;color:#eee;text-align:center;padding:20px}
     h1{margin:6px 0 14px}
+
     .child-card{background:#1c1c3c;padding:28px;margin:18px auto;border-radius:20px;box-shadow:0 4px 15px rgba(0,212,255,.4);max-width:440px;position:relative;overflow:hidden}
     .child-name{font-size:26px;font-weight:700;color:#00d4ff;margin-bottom:12px}
     .points-box{background:#222;padding:14px;border-radius:14px;font-size:34px;font-weight:800;color:#00d4ff;margin-bottom:8px;position:relative}
     .conversion-info{font-size:12px;color:#bbb;margin-top:4px}
+
     .row{display:flex;gap:10px;justify-content:center;align-items:center;flex-wrap:wrap}
 
-    /* 通用膠囊切換（精選/一般、平日/假日共用） */
+    /* 通用：精選/一般 */
     .chip-toggle{background:#222;border-radius:999px;padding:4px;display:inline-flex;gap:6px}
     .chip-toggle button{border:none;padding:8px 14px;border-radius:999px;background:#333;color:#bbb;cursor:pointer;font-weight:700;transition:.15s transform ease,.15s background ease}
     .chip-toggle button.active{background:#00d4ff;color:#111;transform:translateY(-1px)}
+
+    /* 方案切換：使用獨立 class，並強制覆蓋舊樣式 */
+    .plan-toggle{background:#222;border-radius:999px;padding:4px;display:inline-flex;gap:6px}
+    .plan-toggle .btn-plan{
+      border:none;padding:8px 14px;border-radius:999px;
+      background:#333 !important;color:#bbb !important;cursor:pointer;font-weight:700;
+      transition:.15s transform ease,.15s background ease
+    }
+    .plan-toggle .btn-plan.active{
+      background:#00d4ff !important;color:#111 !important;transform:translateY(-1px)
+    }
 
     .subtle{font-size:12px;color:#aaa}
     .progress-title{font-size:15px;color:#00d4ff;margin:8px 0 6px}
@@ -86,11 +99,11 @@
   <h2>送出新紀錄 📝</h2>
   <div id="name-list" class="checkbox-group"></div>
 
-  <!-- 方案切換（外觀與精選/一般一致） -->
+  <!-- 方案切換（獨立 class，未選灰、選取藍） -->
   <div class="row" style="margin-top:4px;margin-bottom:0">
-    <div class="chip-toggle" aria-label="選擇分配方案">
-      <button type="button" id="alloc-weekday" onclick="setAllocPlan('weekday')">平日</button>
-      <button type="button" id="alloc-holiday" onclick="setAllocPlan('holiday')">假日</button>
+    <div class="plan-toggle" aria-label="選擇分配方案">
+      <button type="button" id="alloc-weekday" class="btn-plan" onclick="setAllocPlan('weekday')">平日</button>
+      <button type="button" id="alloc-holiday" class="btn-plan" onclick="setAllocPlan('holiday')">假日</button>
     </div>
   </div>
   <div id="alloc-preview" class="preview">—</div>
@@ -111,7 +124,6 @@
 <script>
   const REFRESH_DELAY = 1000;
   const API_URL = "https://script.google.com/macros/s/AKfycbzk2xXQLv3_e0oktEMZdQjXwkVG9JU6HTolS3dhRH09FPEiHn6dvyAUlUlQZpBAT0rG/exec";
-
   const PLAN_LIMITS = { weekday:{sel:20, reg:20}, holiday:{sel:30, reg:60} };
 
   let currentSelectedTimes = {};
@@ -146,32 +158,29 @@
     }
   }
 
-  /* 方案切換：外觀同膠囊、立即預填、立即更新上限與進度條 */
+  /* 方案切換：預填、更新上限、即時重算進度條 */
   function setAllocPlan(plan){
     allocPlan = plan;
     localStorage.setItem('allocPlan', plan);
     syncAllocPlanButtons();
 
-    // 預填兩欄
     const lim = PLAN_LIMITS[plan];
     document.getElementById('selectedMinutesChange').value = lim.sel;
     document.getElementById('regularMinutesChange').value  = lim.reg;
-    // 自動填入原因
     document.getElementById('reason').value = buildTodayReason();
 
-    // 即時更新進度條上限（保存到 localStorage）
     selMax = lim.sel; regMax = lim.reg;
     localStorage.setItem('selMax', selMax);
     localStorage.setItem('regMax', regMax);
     updateAllocPreview(true);
-    // 不重抓資料，直接在頁面上重算百分比與標籤
     recalcAllProgressBars();
   }
   function syncAllocPlanButtons(){
     const w = document.getElementById('alloc-weekday');
     const h = document.getElementById('alloc-holiday');
-    w.classList.toggle('active', allocPlan==='weekday');
-    h.classList.toggle('active', allocPlan==='holiday');
+    // 確保不會兩顆同時藍
+    w.classList.remove('active'); h.classList.remove('active');
+    (allocPlan==='weekday' ? w : h).classList.add('active');
     w.setAttribute('aria-pressed', allocPlan==='weekday');
     h.setAttribute('aria-pressed', allocPlan==='holiday');
   }
@@ -187,20 +196,15 @@
     if(bump){ el.style.transform='scale(1.04)'; setTimeout(()=>el.style.transform='none',150); }
   }
 
-  /* 依新的上限重算各卡進度條（不發請求） */
   function recalcAllProgressBars(){
     Object.keys(currentSelectedTimes).forEach(name=>{
       const sel = currentSelectedTimes[name]||0;
       const reg = currentRegularTimes[name]||0;
       const card = document.getElementById(`card-${name}`);
       if(!card) return;
-
-      // 標題「上限 X 分」
       const titles = card.querySelectorAll('.progress-title');
       if(titles[0]) titles[0].textContent = `🌟 精選時間（上限 ${selMax} 分）`;
       if(titles[1]) titles[1].textContent = `🎮 一般時間（上限 ${regMax} 分）`;
-
-      // 百分比
       const fills = card.querySelectorAll('.fill');
       if(fills[0]) fills[0].style.width = `${Math.min(100, selMax? (sel/selMax)*100 : 0)}%`;
       if(fills[1]) fills[1].style.width = `${Math.min(100, regMax? (reg/regMax)*100 : 0)}%`;
@@ -404,7 +408,6 @@
     document.querySelectorAll('#name-list input[type="checkbox"]').forEach(cb=>cb.checked=false);
   }
 
-  /* 🎮→⭐ / ⭐→(🌟|🎮) */
   function deductScreenTime(name, minutes){
     const type = activeType[name] || 'regular';
     const current = (type==='selected') ? (currentSelectedTimes[name]||0) : (currentRegularTimes[name]||0);
@@ -472,7 +475,7 @@
 </script>
 
 <div style="margin-top:60px;font-size:.9em;color:#aaa;text-align:center">
-  Made by Evelyn YT ｜ © 2025
+  Made by Evelyn YT ｜ © 2025/8/31 17:55
 </div>
 
 </body>
