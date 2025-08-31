@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <link rel="apple-touch-icon" href="icon.png">
+  <title>Points & Screen Time</title>
+  <style>
+    body{font-family:'Poppins',system-ui,-apple-system,Segoe UI,Roboto,'Noto Sans TC',sans-serif;background:#111;color:#eee;text-align:center;padding:20px}
+    h1{margin:6px 0 14px}
+    .child-card{background:#1c1c3c;padding:28px;margin:18px auto;border-radius:20px;box-shadow:0 4px 15px rgba(0,212,255,.4);max-width:440px;position:relative;overflow:hidden}
+    .child-name{font-size:26px;font-weight:700;color:#00d4ff;margin-bottom:12px}
+    .points-box{background:#222;padding:14px;border-radius:14px;font-size:34px;font-weight:800;color:#00d4ff;margin-bottom:8px;position:relative}
+    .conversion-info{font-size:12px;color:#bbb;margin-top:4px}
+    .row{display:flex;gap:10px;justify-content:center;align-items:center;flex-wrap:wrap}
+    .chip-toggle{background:#222;border-radius:999px;padding:4px;display:inline-flex;gap:4px}
+    .chip-toggle button{border:none;padding:6px 10px;border-radius:999px;background:#333;color:#bbb;cursor:pointer;font-weight:700}
+    .chip-toggle button.active{background:#00d4ff;color:#111}
+    .subtle{font-size:12px;color:#aaa}
+    .progress-title{font-size:15px;color:#00d4ff;margin:8px 0 6px}
+    .progress-dual{display:grid;grid-template-columns:1fr;gap:10px;margin-bottom:6px}
+    .bar-wrap{background:#222;border:2px solid #00d4ff;border-radius:30px;overflow:hidden;height:42px;width:86%;margin:0 auto;position:relative}
+    .fill{height:100%;width:0%;transition:width .5s ease;background:linear-gradient(90deg,#00d4ff,#005eff)}
+    .bar-text{position:absolute;width:100%;text-align:center;top:0;line-height:42px;font-weight:700;color:#fff;font-size:18px}
+    .control-row{display:grid;grid-template-columns:1fr;gap:8px;margin:10px 0}
+    .control-row .left{display:flex;justify-content:center}
+    .control-row .right{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
+    .deduct-btn{padding:6px 0;font-size:16px;border-radius:10px;border:none;background:#333;color:#ccc;cursor:pointer}
+    .deduct-btn:hover{background:#555}
+    .convert-group{display:flex;justify-content:center;gap:10px;margin-top:6px}
+    .btn{padding:8px 12px;font-size:16px;border:none;border-radius:8px;color:#eee;font-weight:700;cursor:pointer;background:#444}
+    .btn:hover{background:#666}
+    .btn.primary{background:#00d4ff;color:#111}
+    #form-section{background:#2a2a5a;padding:20px;border-radius:20px;max-width:440px;margin:24px auto}
+    input[type="number"],input[type="text"],button{padding:10px;margin:8px;font-size:16px;border-radius:8px;border:none;width:80%}
+    #form-section button{background:#00d4ff;color:#111}
+    #family-filter{display:flex;justify-content:center;gap:10px;margin-bottom:16px}
+    #family-filter button{padding:10px 20px;font-size:16px;border-radius:8px;background:#333;color:#ccc;font-weight:700;border:none;cursor:pointer}
+    #family-filter button.active-filter{background:#00d4ff;color:#111}
+    #family-filter .small-button{padding:0;width:40px;height:40px;font-size:22px;display:flex;align-items:center;justify-content:center}
+    .checkbox-group{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:12px}
+    .checkbox-group input[type="checkbox"]{display:none}
+    .checkbox-group label{display:inline-block;padding:12px 20px;background:#333;color:#ccc;border-radius:20px;font-size:18px;cursor:pointer;user-select:none;text-align:center}
+    .checkbox-group input[type="checkbox"]:checked + label{background:#00d4ff;color:#111;font-weight:700}
+    .loading-spinner{border:4px solid #333;border-top:4px solid #00d4ff;border-radius:50%;width:40px;height:40px;animation:spin 1s linear infinite;margin:auto}
+    @keyframes spin{0%{transform:rotate(0)}100%{transform:rotate(360deg)}}
+    .shimmer-effect{position:absolute;inset:0;background:linear-gradient(90deg,rgba(0,212,255,0) 0%,rgba(0,212,255,.2) 50%,rgba(0,212,255,0) 100%);background-size:200% 100%;animation:shimmer 4s infinite;pointer-events:none;z-index:10}
+    @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+    .note{font-size:13px;color:#bbb;margin-top:-2px}
+    .pair{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .pill{display:inline-block;background:#222;border:1px dashed #444;padding:6px 10px;border-radius:999px;color:#bbb;font-size:12px}
+  </style>
+</head>
+<body>
+
+<h1>⭐ & 📺</h1>
+
+<!-- 家庭篩選 -->
+<div id="family-filter">
+  <button onclick="setFamilyFilter('ev-family')">⚡ 閃電森林</button>
+  <button onclick="setFamilyFilter('ap-family')">🍊 柚柚來點名</button>
+  <button onclick="clearFamilyFilter()" class="small-button">❎</button>
+</div>
+
+<!-- 卡片區 -->
+<div id="leaderboard">
+  <div style="margin:20px">
+    <div class="loading-spinner"></div>
+    <div style="margin-top:10px;font-size:18px">載入中...</div>
+  </div>
+</div>
+
+<!-- 家長控制 -->
+<div id="form-section">
+  <h2>送出新紀錄 📝</h2>
+  <div id="name-list" class="checkbox-group"></div>
+
+  <input type="number" id="pointsChange" placeholder="⭐ 點數調整（+/-）">
+
+  <div class="pair">
+    <input type="number" id="selectedMinutesChange" placeholder="🌟 精選時間（+/- 分）">
+    <input type="number" id="regularMinutesChange"  placeholder="🎮 一般時間（+/- 分）">
+  </div>
+
+  <input type="text" id="reason" placeholder="變更原因">
+  <button onclick="submitData()">送出 🚀</button>
+
+  <div class="note">轉換規則：<span class="pill">🎮 2 分 → ⭐ 1 點</span><span class="pill">⭐ 1 點 → 🎮 2 分</span><span class="pill">⭐ 1 點 → 🌟 3 分</span>（🌟精選不可換回⭐）</div>
+
+  <hr style="border:none;height:1px;background:#445;margin:18px 0">
+
+  <h3 style="margin:8px 0 4px">一鍵分配 ⏱</h3>
+  <div class="row" style="margin-bottom:6px">
+    <div class="chip-toggle" aria-label="選擇分配方案">
+      <button id="alloc-weekday" class="active" onclick="setAllocPlan('weekday')">平日</button>
+      <button id="alloc-holiday" onclick="setAllocPlan('holiday')">假日</button>
+    </div>
+  </div>
+  <div class="subtle">平日＝🌟20 分＋🎮20 分 ｜ 假日＝🌟30 分＋🎮60 分</div>
+  <div class="row" style="margin-top:8px">
+    <button class="btn primary" onclick="applyAllocation()">將當前方案套用到勾選的小孩</button>
+  </div>
+</div>
+
+<!-- 進度條最大值 -->
+<div id="form-section">
+  <h2>設定進度條比例 🛠️</h2>
+  <input type="number" id="maxMinutesInput" placeholder="🔧輸入每條最大分鐘數（單條）">
+  <button onclick="setMaxMinutes()">設定進度條最大時間</button>
+  <div class="subtle">每位小孩顯示兩條（🌟/🎮），此值為「每條」上限。</div>
+</div>
+
+<script>
+  const REFRESH_DELAY = 1000;
+  const API_URL = "https://script.google.com/macros/s/AKfycbxV2-_YXk2yOthCiCrho5S1obb0HXRKw-OJ4bFKeTsvXEpPGnAbAFs3vhWyjKHftszP/exec";
+
+  let currentSelectedTimes = {};
+  let currentRegularTimes  = {};
+  let updatingChildren = {};
+  let maxMinutes = localStorage.getItem('maxMinutes') ? parseInt(localStorage.getItem('maxMinutes')) : 120;
+  let familyFilter = localStorage.getItem('familyFilter') || '';
+  let allocPlan = localStorage.getItem('allocPlan') || 'weekday';
+  const activeType = {}; // { name: 'selected' | 'regular' }
+
+  document.addEventListener('DOMContentLoaded', ()=>{
+    fetchLeaderboard();
+    syncAllocPlanButtons();
+  });
+
+  function setFamilyFilter(f){ familyFilter=f; localStorage.setItem('familyFilter',f); showLoading(); fetchLeaderboard(); updateFilterButtons(); }
+  function clearFamilyFilter(){ familyFilter=''; localStorage.removeItem('familyFilter'); showLoading(); fetchLeaderboard(); updateFilterButtons();}
+  function updateFilterButtons(){
+    document.querySelectorAll('#family-filter button').forEach(b=>b.classList.remove('active-filter'));
+    if(familyFilter){
+      const btn = document.querySelector(`#family-filter button[onclick="setFamilyFilter('${familyFilter}')"]`);
+      if(btn) btn.classList.add('active-filter');
+    }
+  }
+
+  function setAllocPlan(plan){ allocPlan=plan; localStorage.setItem('allocPlan',plan); syncAllocPlanButtons();}
+  function syncAllocPlanButtons(){
+    document.getElementById('alloc-weekday').classList.toggle('active', allocPlan==='weekday');
+    document.getElementById('alloc-holiday').classList.toggle('active', allocPlan==='holiday');
+  }
+
+  function showLoading(){
+    document.getElementById('leaderboard').innerHTML = `
+      <div style="margin:20px">
+        <div class="loading-spinner"></div>
+        <div style="margin-top:10px;font-size:18px">載入中...</div>
+      </div>`;
+  }
+
+  function fetchLeaderboard(){
+    const callbackName = 'cb_' + Math.floor(Math.random()*1e6);
+    window[callbackName] = function(data){
+      renderLeaderboard(data);
+      for(const name in updatingChildren){ stopShimmerEffect(name); }
+      updatingChildren = {};
+      delete window[callbackName];
+    };
+    const s=document.createElement('script');
+    s.src = `${API_URL}?action=getLeaderboard&callback=${callbackName}`;
+    s.onload = function(){ this.remove(); };
+    document.body.appendChild(s);
+    updateFilterButtons();
+  }
+
+  function renderLeaderboard(data){
+    const leaderboard = document.getElementById('leaderboard');
+    if(!Array.isArray(data)){ leaderboard.innerText='載入失敗'; return; }
+
+    // 家庭過濾（前端）
+    if(familyFilter){
+      data = data.filter(e=>{
+        if(familyFilter==='ev-family'){ return e.Name==='Miles'||e.Name==='Emmett';}
+        if(familyFilter==='ap-family'){ return e.Name==='Tessa'||e.Name==='Archer';}
+        return true;
+      });
+    }
+
+    updateNameCheckboxes(data);
+
+    let html = '';
+    data.forEach(entry=>{
+      const sel = entry.TotalSelectedMinutes || 0;
+      const reg = entry.TotalRegularMinutes  || 0;
+      const pts = entry.TotalPoints || 0;
+
+      currentSelectedTimes[entry.Name] = sel;
+      currentRegularTimes[entry.Name]  = reg;
+      if(!activeType[entry.Name]) activeType[entry.Name]='regular';
+
+      const selPct = Math.min(100, (sel / maxMinutes) * 100);
+      const regPct = Math.min(100, (reg / maxMinutes) * 100);
+
+      const cash = pts * 5;
+      const canSel = pts * 3; // ⭐→🌟 3 分/點
+      const canReg = pts * 2; // ⭐→🎮 2 分/點
+
+      const opSelActive = activeType[entry.Name]==='selected';
+      const opRegActive = activeType[entry.Name]==='regular';
+
+      html += `
+      <div class="child-card" id="card-${entry.Name}">
+        <div class="child-name">👦 ${entry.Name}</div>
+
+        <div class="points-box">⭐ ${pts} 點
+          <div class="conversion-info">可換：🌟 ${canSel} 分｜🎮 ${canReg} 分｜💰 ${cash} 元</div>
+        </div>
+
+        <div class="progress-dual">
+          <div>
+            <div class="progress-title">🌟 精選時間</div>
+            <div class="bar-wrap">
+              <div class="fill" style="width:${selPct}%"></div>
+              <div class="bar-text">${sel} 分鐘</div>
+            </div>
+          </div>
+          <div>
+            <div class="progress-title">🎮 一般時間</div>
+            <div class="bar-wrap">
+              <div class="fill" style="width:${regPct}%"></div>
+              <div class="bar-text">${reg} 分鐘</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 操作目標 + 扣時按鈕在同一區 -->
+        <div class="control-row">
+          <div class="left">
+            <div class="chip-toggle" aria-label="操作目標">
+              <button class="${opSelActive?'active':''}" onclick="setOpType('${entry.Name}','selected')">🌟 精選</button>
+              <button class="${opRegActive?'active':''}" onclick="setOpType('${entry.Name}','regular')">🎮 一般</button>
+            </div>
+          </div>
+          <div class="right">
+            ${[5,10,15,20,25,30].map(m=>`<button class="deduct-btn" onclick="deductScreenTime('${entry.Name}', ${m})">-${m}</button>`).join('')}
+          </div>
+        </div>
+
+        <div class="convert-group">
+          <button class="btn" onclick="convertRegularToPoints('${entry.Name}')">🎮 ➔ ⭐</button>
+          <button class="btn" onclick="convertPointsToTime('${entry.Name}')">⭐ ➔ ${opSelActive?'🌟':'🎮'}</button>
+        </div>
+
+        ${updatingChildren[entry.Name] ? '<div class="shimmer-effect"></div>' : ''}
+      </div>
+      `;
+    });
+
+    leaderboard.innerHTML = html;
+  }
+
+  function updateNameCheckboxes(data){
+    const box = document.getElementById('name-list');
+    box.innerHTML = '';
+    data.forEach(e=>{
+      const id = 'child-' + e.Name;
+      const input = document.createElement('input');
+      input.type='checkbox'; input.id=id; input.value=e.Name;
+      const label = document.createElement('label');
+      label.htmlFor=id; label.textContent=e.Name;
+      box.appendChild(input); box.appendChild(label);
+    });
+  }
+
+  function setOpType(name, type){
+    activeType[name]=type;
+    fetchLeaderboard(); // 簡化處理：刷新以更新按鈕樣式
+  }
+
+  function startShimmerEffect(name){
+    updatingChildren[name]=true;
+    const card=document.getElementById(`card-${name}`);
+    if(card && !card.querySelector('.shimmer-effect')){
+      const d=document.createElement('div');
+      d.className='shimmer-effect';
+      card.appendChild(d);
+    }
+  }
+  function stopShimmerEffect(name){
+    delete updatingChildren[name];
+    const card=document.getElementById(`card-${name}`);
+    if(!card) return;
+    const sh=card.querySelector('.shimmer-effect');
+    if(sh) sh.remove();
+  }
+
+  function submitToApi(payload, callback){
+    const iframe=document.createElement('iframe');
+    iframe.style.display='none';
+    iframe.onload=function(){ callback(); this.remove(); };
+    iframe.src = `${API_URL}?action=submit&data=${encodeURIComponent(JSON.stringify(payload))}`;
+    document.body.appendChild(iframe);
+  }
+
+  function submitData(){
+    const checked=[...document.querySelectorAll('#name-list input[type="checkbox"]:checked')];
+    const pointsChange = document.getElementById('pointsChange').value.trim();
+    const selChange    = document.getElementById('selectedMinutesChange').value.trim();
+    const regChange    = document.getElementById('regularMinutesChange').value.trim();
+    const reason       = document.getElementById('reason').value.trim();
+
+    if(checked.length===0){ alert('請選擇至少一個小孩'); return; }
+    if(!pointsChange && !selChange && !regChange){ alert('請輸入點數或螢幕時間調整'); return; }
+
+    let done=0;
+    checked.forEach(cb=>{
+      const name=cb.value;
+      const family = (name==='Miles'||name==='Emmett')?'ev-family':'ap-family';
+
+      startShimmerEffect(name);
+      const payload = {
+        Family: family,
+        Name: name,
+        PointsChange: pointsChange ? parseInt(pointsChange,10):0,
+        SelectedMinutesChange: selChange ? parseInt(selChange,10):0,
+        RegularMinutesChange:  regChange ? parseInt(regChange,10):0,
+        Reason: reason || '家長手動調整'
+      };
+      submitToApi(payload, ()=>{ if(++done===checked.length) setTimeout(fetchLeaderboard, REFRESH_DELAY); });
+    });
+
+    document.getElementById('pointsChange').value='';
+    document.getElementById('selectedMinutesChange').value='';
+    document.getElementById('regularMinutesChange').value='';
+    document.getElementById('reason').value='';
+    document.querySelectorAll('#name-list input[type="checkbox"]').forEach(cb=>cb.checked=false);
+  }
+
+  function applyAllocation(){
+    const checked=[...document.querySelectorAll('#name-list input[type="checkbox"]:checked')];
+    if(checked.length===0){ alert('請先勾選小孩'); return; }
+    const plan = allocPlan==='weekday' ? {sel:20, reg:20} : {sel:30, reg:60};
+    if(!confirm(`將套用到 ${checked.length} 位：\n🌟 精選 +${plan.sel} 分\n🎮 一般 +${plan.reg} 分`)) return;
+
+    let done=0;
+    checked.forEach(cb=>{
+      const name=cb.value;
+      const family=(name==='Miles'||name==='Emmett')?'ev-family':'ap-family';
+      startShimmerEffect(name);
+      const payload={
+        Family:family, Name:name,
+        PointsChange:0,
+        SelectedMinutesChange:plan.sel,
+        RegularMinutesChange:plan.reg,
+        Reason:`一鍵分配（${allocPlan==='weekday'?'平日':'假日'}）`
+      };
+      submitToApi(payload, ()=>{ if(++done===checked.length) setTimeout(fetchLeaderboard, REFRESH_DELAY); });
+    });
+  }
+
+  function deductScreenTime(name, minutes){
+    const type = activeType[name] || 'regular';
+    const current = (type==='selected') ? (currentSelectedTimes[name]||0) : (currentRegularTimes[name]||0);
+    if(current < minutes){ alert(`該類別時間不足，無法扣除 ${minutes} 分！`); return; }
+    const family=(name==='Miles'||name==='Emmett')?'ev-family':'ap-family';
+    if(!confirm(`確定扣除 ${minutes} 分（${type==='selected'?'🌟精選':'🎮一般'}）？`)) return;
+
+    startShimmerEffect(name);
+    const payload={
+      Family:family, Name:name, PointsChange:0,
+      SelectedMinutesChange: type==='selected' ? -minutes : 0,
+      RegularMinutesChange:  type==='regular' ? -minutes : 0,
+      Reason:`扣除${type==='selected'?'精選':'一般'}時間 ${minutes} 分`
+    };
+    submitToApi(payload, ()=> setTimeout(fetchLeaderboard, REFRESH_DELAY));
+  }
+
+  // 🎮 一般 → ⭐（2 分 = 1 點；捨去不足 2 分）
+  function convertRegularToPoints(name){
+    const reg = currentRegularTimes[name]||0;
+    if(reg<2){ alert('🎮 一般時間不足 2 分，無法轉點數'); return; }
+    const maxPts = Math.floor(reg/2);
+    const want = parseInt(prompt(`目前🎮一般 ${reg} 分，可換最高 ⭐ ${maxPts} 點。\n請輸入要換的點數：`),10);
+    if(isNaN(want)||want<=0||want>maxPts){ alert('輸入數量無效'); return; }
+
+    const family=(name==='Miles'||name==='Emmett')?'ev-family':'ap-family';
+    const mins = want*2;
+
+    if(!confirm(`確認轉換：🎮 ${mins} 分 → ⭐ ${want} 點`)) return;
+
+    startShimmerEffect(name);
+    const payload={
+      Family:family, Name:name,
+      PointsChange: want,
+      SelectedMinutesChange:0,
+      RegularMinutesChange: -mins,
+      Reason:'一般時間轉點數（2分→1點）'
+    };
+    submitToApi(payload, ()=>{ setTimeout(fetchLeaderboard, REFRESH_DELAY); alert(`已將 🎮 ${mins} 分換成 ⭐ ${want} 點`); });
+  }
+
+  // ⭐ → 🌟/🎮 （依操作目標：🌟=3 分/點；🎮=2 分/點）
+  function convertPointsToTime(name){
+    const type = activeType[name]||'regular';
+    const family=(name==='Miles'||name==='Emmett')?'ev-family':'ap-family';
+    const ptsMatch = document.querySelector(`#card-${name} .points-box`)?.textContent.match(/(\d+)\s*點/);
+    const hasPts = ptsMatch ? parseInt(ptsMatch[1],10) : 0;
+    if(hasPts<=0){ alert('沒有可轉換的點數'); return; }
+
+    const rate = (type==='selected') ? 3 : 2;
+    const want = parseInt(prompt(`目前 ⭐ ${hasPts} 點。\n轉為 ${type==='selected'?'🌟精選':'🎮一般'}：1點→${rate}分\n請輸入要轉換的點數：`),10);
+    if(isNaN(want)||want<=0||want>hasPts){ alert('輸入數量無效'); return; }
+
+    const mins = want*rate;
+    if(!confirm(`確認轉換：⭐ ${want} 點 → ${type==='selected'?'🌟':''}${type==='regular'?'🎮':''} ${mins} 分`)) return;
+
+    startShimmerEffect(name);
+    const payload={
+      Family:family, Name:name,
+      PointsChange:-want,
+      SelectedMinutesChange: type==='selected'? mins:0,
+      RegularMinutesChange:  type==='regular'? mins:0,
+      Reason:`點數轉${type==='selected'?'精選':'一般'}時間（1點→${rate}分）`
+    };
+    submitToApi(payload, ()=>{ setTimeout(fetchLeaderboard, REFRESH_DELAY); alert(`已將 ⭐ ${want} 點換成 ${type==='selected'?'🌟精選':'🎮一般'} ${mins} 分`); });
+  }
+
+  function setMaxMinutes(){
+    const v=parseInt(document.getElementById('maxMinutesInput').value.trim(),10);
+    if(isNaN(v)||v<=0){ alert('請輸入有效的分鐘數'); return;}
+    maxMinutes=v; localStorage.setItem('maxMinutes',v); fetchLeaderboard();
+  }
+</script>
+
+<div style="margin-top:60px;font-size:.9em;color:#aaa;text-align:center">
+  Made by Evelyn YT ｜ © 2025
+</div>
+
+</body>
+</html>
