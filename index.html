@@ -14,35 +14,44 @@
     .points-box{background:#222;padding:14px;border-radius:14px;font-size:34px;font-weight:800;color:#00d4ff;margin-bottom:8px;position:relative}
     .conversion-info{font-size:12px;color:#bbb;margin-top:4px}
     .row{display:flex;gap:10px;justify-content:center;align-items:center;flex-wrap:wrap}
+
+    /* 通用膠囊切換（精選/一般、平日/假日共用） */
     .chip-toggle{background:#222;border-radius:999px;padding:4px;display:inline-flex;gap:6px}
     .chip-toggle button{border:none;padding:8px 14px;border-radius:999px;background:#333;color:#bbb;cursor:pointer;font-weight:700;transition:.15s transform ease,.15s background ease}
     .chip-toggle button.active{background:#00d4ff;color:#111;transform:translateY(-1px)}
+
     .subtle{font-size:12px;color:#aaa}
     .progress-title{font-size:15px;color:#00d4ff;margin:8px 0 6px}
     .progress-dual{display:grid;grid-template-columns:1fr;gap:10px;margin-bottom:6px}
     .bar-wrap{background:#222;border:2px solid #00d4ff;border-radius:30px;overflow:hidden;height:42px;width:86%;margin:0 auto;position:relative}
     .fill{height:100%;width:0%;transition:width .5s ease;background:linear-gradient(90deg,#00d4ff,#005eff)}
     .bar-text{position:absolute;width:100%;text-align:center;top:0;line-height:42px;font-weight:700;color:#fff;font-size:18px}
+
     .control-row{display:grid;grid-template-columns:1fr;gap:8px;margin:10px 0}
     .control-row .left{display:flex;justify-content:center}
     .control-row .right{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
     .deduct-btn{padding:6px 0;font-size:16px;border-radius:10px;border:none;background:#333;color:#ccc;cursor:pointer}
     .deduct-btn:hover{background:#555}
+
     .convert-group{display:flex;justify-content:center;gap:10px;margin-top:6px}
     .btn{padding:8px 12px;font-size:16px;border:none;border-radius:8px;color:#eee;font-weight:700;cursor:pointer;background:#444}
     .btn:hover{background:#666}
     .btn.primary{background:#00d4ff;color:#111}
+
     #form-section{background:#2a2a5a;padding:20px;border-radius:20px;max-width:440px;margin:24px auto}
     input[type="number"],input[type="text"],button{padding:10px;margin:8px;font-size:16px;border-radius:8px;border:none;width:80%}
     #form-section button{background:#00d4ff;color:#111}
+
     #family-filter{display:flex;justify-content:center;gap:10px;margin-bottom:16px}
     #family-filter button{padding:10px 20px;font-size:16px;border-radius:8px;background:#333;color:#ccc;font-weight:700;border:none;cursor:pointer}
     #family-filter button.active-filter{background:#00d4ff;color:#111}
     #family-filter .small-button{padding:0;width:40px;height:40px;font-size:22px;display:flex;align-items:center;justify-content:center}
+
     .checkbox-group{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:12px}
     .checkbox-group input[type="checkbox"]{display:none}
     .checkbox-group label{display:inline-block;padding:12px 20px;background:#333;color:#ccc;border-radius:20px;font-size:18px;cursor:pointer;user-select:none;text-align:center}
     .checkbox-group input[type="checkbox"]:checked + label{background:#00d4ff;color:#111;font-weight:700}
+
     .loading-spinner{border:4px solid #333;border-top:4px solid #00d4ff;border-radius:50%;width:40px;height:40px;animation:spin 1s linear infinite;margin:auto}
     @keyframes spin{0%{transform:rotate(0)}100%{transform:rotate(360deg)}}
     .shimmer-effect{position:absolute;inset:0;background:linear-gradient(90deg,rgba(0,212,255,0) 0%,rgba(0,212,255,.2) 50%,rgba(0,212,255,0) 100%);background-size:200% 100%;animation:shimmer 4s infinite;pointer-events:none;z-index:10}
@@ -77,7 +86,7 @@
   <h2>送出新紀錄 📝</h2>
   <div id="name-list" class="checkbox-group"></div>
 
-  <!-- 方案切換：外觀與精選/一般一致 -->
+  <!-- 方案切換（外觀與精選/一般一致） -->
   <div class="row" style="margin-top:4px;margin-bottom:0">
     <div class="chip-toggle" aria-label="選擇分配方案">
       <button type="button" id="alloc-weekday" onclick="setAllocPlan('weekday')">平日</button>
@@ -97,14 +106,6 @@
   <button type="button" onclick="submitData()">送出 🚀</button>
 
   <div class="note">轉換規則：<span class="pill">🎮 2 分 → ⭐ 1 點</span><span class="pill">⭐ 1 點 → 🎮 2 分</span><span class="pill">⭐ 1 點 → 🌟 3 分</span>（🌟精選不可換回⭐）</div>
-
-  <hr style="border:none;height:1px;background:#445;margin:18px 0">
-
-  <h3 style="margin:8px 0 4px">一鍵分配 ⏱</h3>
-  <div class="subtle">平日＝🌟20 分＋🎮20 分 ｜ 假日＝🌟30 分＋🎮60 分</div>
-  <div class="row" style="margin-top:8px">
-    <button type="button" class="btn primary" onclick="applyAllocation()">將當前方案套用到勾選的小孩</button>
-  </div>
 </div>
 
 <script>
@@ -145,19 +146,26 @@
     }
   }
 
-  /* 一鍵分配：切換（外觀同精選/一般）＋自動預填＆更新預覽 */
+  /* 方案切換：外觀同膠囊、立即預填、立即更新上限與進度條 */
   function setAllocPlan(plan){
     allocPlan = plan;
     localStorage.setItem('allocPlan', plan);
     syncAllocPlanButtons();
 
-    // 自動預填兩個欄位
+    // 預填兩欄
     const lim = PLAN_LIMITS[plan];
     document.getElementById('selectedMinutesChange').value = lim.sel;
     document.getElementById('regularMinutesChange').value  = lim.reg;
     // 自動填入原因
     document.getElementById('reason').value = buildTodayReason();
+
+    // 即時更新進度條上限（保存到 localStorage）
+    selMax = lim.sel; regMax = lim.reg;
+    localStorage.setItem('selMax', selMax);
+    localStorage.setItem('regMax', regMax);
     updateAllocPreview(true);
+    // 不重抓資料，直接在頁面上重算百分比與標籤
+    recalcAllProgressBars();
   }
   function syncAllocPlanButtons(){
     const w = document.getElementById('alloc-weekday');
@@ -179,7 +187,27 @@
     if(bump){ el.style.transform='scale(1.04)'; setTimeout(()=>el.style.transform='none',150); }
   }
 
-  /* 載入 */
+  /* 依新的上限重算各卡進度條（不發請求） */
+  function recalcAllProgressBars(){
+    Object.keys(currentSelectedTimes).forEach(name=>{
+      const sel = currentSelectedTimes[name]||0;
+      const reg = currentRegularTimes[name]||0;
+      const card = document.getElementById(`card-${name}`);
+      if(!card) return;
+
+      // 標題「上限 X 分」
+      const titles = card.querySelectorAll('.progress-title');
+      if(titles[0]) titles[0].textContent = `🌟 精選時間（上限 ${selMax} 分）`;
+      if(titles[1]) titles[1].textContent = `🎮 一般時間（上限 ${regMax} 分）`;
+
+      // 百分比
+      const fills = card.querySelectorAll('.fill');
+      if(fills[0]) fills[0].style.width = `${Math.min(100, selMax? (sel/selMax)*100 : 0)}%`;
+      if(fills[1]) fills[1].style.width = `${Math.min(100, regMax? (reg/regMax)*100 : 0)}%`;
+    });
+  }
+
+  /* 載入排行榜 */
   function showLoading(){
     document.getElementById('leaderboard').innerHTML = `
       <div style="margin:20px">
@@ -376,35 +404,7 @@
     document.querySelectorAll('#name-list input[type="checkbox"]').forEach(cb=>cb.checked=false);
   }
 
-  function applyAllocation(){
-    const checked=[...document.querySelectorAll('#name-list input[type="checkbox"]:checked')];
-    if(checked.length===0){ alert('請先勾選小孩'); return; }
-    const plan = PLAN_LIMITS[allocPlan];
-
-    // 自動設定進度條上限（存到 localStorage）
-    selMax = plan.sel; regMax = plan.reg;
-    localStorage.setItem('selMax', selMax);
-    localStorage.setItem('regMax', regMax);
-    updateAllocPreview(true);
-
-    if(!confirm(`將套用到 ${checked.length} 位：\n🌟 精選 +${plan.sel} 分\n🎮 一般 +${plan.reg} 分\n（並將進度條上限設定為 🌟${plan.sel}/🎮${plan.reg}）`)) return;
-
-    let done=0;
-    checked.forEach(cb=>{
-      const name=cb.value;
-      const family=(name==='Miles'||name==='Emmett')?'ev-family':'ap-family';
-      startShimmerEffect(name);
-      const payload={
-        Family:family, Name:name,
-        PointsChange:0,
-        SelectedMinutesChange:plan.sel,
-        RegularMinutesChange:plan.reg,
-        Reason:`一鍵分配（${allocPlan==='weekday'?'平日':'假日'}）`
-      };
-      submitToApi(payload, ()=>{ if(++done===checked.length) setTimeout(fetchLeaderboard, REFRESH_DELAY); });
-    });
-  }
-
+  /* 🎮→⭐ / ⭐→(🌟|🎮) */
   function deductScreenTime(name, minutes){
     const type = activeType[name] || 'regular';
     const current = (type==='selected') ? (currentSelectedTimes[name]||0) : (currentRegularTimes[name]||0);
@@ -422,7 +422,6 @@
     submitToApi(payload, ()=> setTimeout(fetchLeaderboard, REFRESH_DELAY));
   }
 
-  // 🎮 一般 → ⭐（2 分 = 1 點；捨去不足 2 分）
   function convertRegularToPoints(name){
     const reg = currentRegularTimes[name]||0;
     if(reg<2){ alert('🎮 一般時間不足 2 分，無法轉點數'); return; }
@@ -446,7 +445,6 @@
     submitToApi(payload, ()=>{ setTimeout(fetchLeaderboard, REFRESH_DELAY); alert(`已將 🎮 ${mins} 分換成 ⭐ ${want} 點`); });
   }
 
-  // ⭐ → 🌟/🎮 （依操作目標：🌟=3 分/點；🎮=2 分/點）
   function convertPointsToTime(name){
     const type = activeType[name]||'regular';
     const family=(name==='Miles'||name==='Emmett')?'ev-family':'ap-family';
