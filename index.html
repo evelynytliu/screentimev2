@@ -94,9 +94,10 @@
     .fill.danger { background: linear-gradient(90deg, #ff4444, #ff0000); box-shadow: 0 0 10px #ff0000; }
 
     .bar-text {
-      position: absolute; width: 100%; text-align: center; top: 0; line-height: 34px;
+      position: absolute; width: 100%; text-align: center; top: 0; line-height: 36px;
       font-weight: 700; color: #fff; font-size: 15px; text-shadow: 0 1px 3px rgba(0,0,0,0.8);
       z-index: 2;
+      pointer-events: none; /* 確保文字不會影響點擊 */
     }
 
     /* --- 按鈕與控制區 --- */
@@ -248,7 +249,7 @@
 </div>
 
 <div style="margin-top:40px;font-size:12px;color:#555;">
-  Made by Evelyn YT | Updated NOV 2025
+  Made by Evelyn YT | Updated 2025
 </div>
 
 <script>
@@ -440,10 +441,11 @@
           <div>
             <div class="progress-title">
               <span>🌟 精選時間</span>
-              <span style="font-size:12px;color:#888">${sel} / ${selMax}</span>
+              <span style="font-size:12px;color:#666">上限: ${selMax}</span>
             </div>
             <div class="bar-wrap">
               <div class="fill ${selClass}" style="width:${selPct}%"></div>
+              <div class="bar-text">${sel} 分鐘</div>
             </div>
           </div>
           
@@ -451,10 +453,11 @@
           <div>
             <div class="progress-title">
               <span>🎮 一般時間</span>
-              <span style="font-size:12px;color:#888">${reg} / ${regMax}</span>
+              <span style="font-size:12px;color:#666">上限: ${regMax}</span>
             </div>
             <div class="bar-wrap">
               <div class="fill ${regClass}" style="width:${regPct}%"></div>
+              <div class="bar-text">${reg} 分鐘</div>
             </div>
           </div>
         </div>
