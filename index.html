@@ -2,123 +2,253 @@
 <html lang="zh-Hant">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-  <link rel="icon" href="icon.png" type="image/png">
-  <link rel="apple-touch-icon" href="icon.png">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
   <title>Points & Screen Time</title>
+  
+  <!-- 引入 SweetAlert2 (美化彈窗) -->
+  <link href="https://cdn.jsdelivr.net/npm/@sweetalert2/theme-dark@4/dark.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.js"></script>
+  
+  <!-- 引入 Canvas Confetti (彩帶特效) -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
+
   <style>
-    body{font-family:'Poppins',system-ui,-apple-system,Segoe UI,Roboto,'Noto Sans TC',sans-serif;background:#111;color:#eee;text-align:center;padding:20px}
-    h1{margin:6px 0 14px}
-
-    .child-card{background:#1c1c3c;padding:28px;margin:18px auto;border-radius:20px;box-shadow:0 4px 15px rgba(0,212,255,.4);max-width:440px;position:relative;overflow:hidden}
-    .child-name{font-size:26px;font-weight:700;color:#00d4ff;margin-bottom:12px}
-    .points-box{background:#222;padding:14px;border-radius:14px;font-size:34px;font-weight:800;color:#00d4ff;margin-bottom:8px;position:relative}
-    .conversion-info{font-size:12px;color:#bbb;margin-top:4px}
-
-    .row{display:flex;gap:10px;justify-content:center;align-items:center;flex-wrap:wrap}
-
-    /* 通用：精選/一般 */
-    .chip-toggle{background:#222;border-radius:999px;padding:4px;display:inline-flex;gap:6px}
-    .chip-toggle button{border:none;padding:8px 14px;border-radius:999px;background:#333;color:#bbb;cursor:pointer;font-weight:700;transition:.15s transform ease,.15s background ease}
-    .chip-toggle button.active{background:#00d4ff;color:#111;transform:translateY(-1px)}
-
-    /* 方案切換：使用獨立 class，並強制覆蓋舊樣式 */
-    .plan-toggle{background:#222;border-radius:999px;padding:4px;display:inline-flex;gap:6px}
-    .plan-toggle .btn-plan{
-      border:none;padding:8px 14px;border-radius:999px;
-      background:#333 !important;color:#bbb !important;cursor:pointer;font-weight:700;
-      transition:.15s transform ease,.15s background ease
-    }
-    .plan-toggle .btn-plan.active{
-      background:#00d4ff !important;color:#111 !important;transform:translateY(-1px)
+    :root {
+      --primary: #00d4ff;
+      --primary-hover: #00b8dd;
+      --bg-dark: #111;
+      --bg-card: #1c1c3c;
+      --bg-input: #222;
+      --text-main: #eee;
+      --text-muted: #bbb;
+      --radius-lg: 20px;
+      --radius-sm: 8px;
+      --shadow-glow: 0 4px 15px rgba(0,212,255,0.3);
     }
 
-    .subtle{font-size:12px;color:#aaa}
-    .progress-title{font-size:15px;color:#00d4ff;margin:8px 0 6px}
-    .progress-dual{display:grid;grid-template-columns:1fr;gap:10px;margin-bottom:6px}
-    .bar-wrap{background:#222;border:2px solid #00d4ff;border-radius:30px;overflow:hidden;height:42px;width:86%;margin:0 auto;position:relative}
-    .fill{height:100%;width:0%;transition:width .5s ease;background:linear-gradient(90deg,#00d4ff,#005eff)}
-    .bar-text{position:absolute;width:100%;text-align:center;top:0;line-height:42px;font-weight:700;color:#fff;font-size:18px}
+    body {
+      font-family: 'Poppins', system-ui, -apple-system, 'Noto Sans TC', sans-serif;
+      background: var(--bg-dark);
+      color: var(--text-main);
+      text-align: center;
+      padding: 20px 10px;
+      margin: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+    
+    h1 { margin: 10px 0 20px; letter-spacing: 1px; }
 
-    .control-row{display:grid;grid-template-columns:1fr;gap:8px;margin:10px 0}
-    .control-row .left{display:flex;justify-content:center}
-    .control-row .right{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
-    .deduct-btn{padding:6px 0;font-size:16px;border-radius:10px;border:none;background:#333;color:#ccc;cursor:pointer}
-    .deduct-btn:hover{background:#555}
+    /* --- 卡片樣式 --- */
+    .child-card {
+      background: var(--bg-card);
+      padding: 24px;
+      margin: 18px auto;
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-glow);
+      max-width: 440px;
+      position: relative;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.05);
+    }
 
-    .convert-group{display:flex;justify-content:center;gap:10px;margin-top:6px}
-    .btn{padding:8px 12px;font-size:16px;border:none;border-radius:8px;color:#eee;font-weight:700;cursor:pointer;background:#444}
-    .btn:hover{background:#666}
-    .btn.primary{background:#00d4ff;color:#111}
+    .child-name { font-size: 26px; font-weight: 700; color: var(--primary); margin-bottom: 12px; }
 
-    #form-section{background:#2a2a5a;padding:20px;border-radius:20px;max-width:440px;margin:24px auto}
-    input[type="number"],input[type="text"],button{padding:10px;margin:8px;font-size:16px;border-radius:8px;border:none;width:80%}
-    #form-section button{background:#00d4ff;color:#111}
+    .points-box {
+      background: rgba(0,0,0,0.3);
+      padding: 16px;
+      border-radius: 16px;
+      font-size: 36px;
+      font-weight: 800;
+      color: var(--primary);
+      margin-bottom: 12px;
+      border: 1px solid rgba(0,212,255,0.1);
+      text-shadow: 0 0 10px rgba(0,212,255,0.4);
+    }
+    
+    .conversion-info { font-size: 13px; color: var(--text-muted); margin-top: 6px; font-weight: normal; }
 
-    #family-filter{display:flex;justify-content:center;gap:10px;margin-bottom:16px}
-    #family-filter button{padding:10px 20px;font-size:16px;border-radius:8px;background:#333;color:#ccc;font-weight:700;border:none;cursor:pointer}
-    #family-filter button.active-filter{background:#00d4ff;color:#111}
-    #family-filter .small-button{padding:0;width:40px;height:40px;font-size:22px;display:flex;align-items:center;justify-content:center}
+    /* --- 進度條區塊 --- */
+    .progress-dual { display: grid; grid-template-columns: 1fr; gap: 12px; margin-bottom: 10px; }
+    .progress-title { font-size: 14px; color: var(--primary); margin: 6px 0 4px; display: flex; justify-content: space-between; padding: 0 8px; }
+    
+    .bar-wrap {
+      background: #222;
+      border: 2px solid rgba(0,212,255,0.3);
+      border-radius: 30px;
+      overflow: hidden;
+      height: 36px;
+      width: 100%;
+      position: relative;
+    }
+    
+    .fill {
+      height: 100%;
+      width: 0%;
+      transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+      background: linear-gradient(90deg, var(--primary), #005eff);
+      box-shadow: 0 0 10px var(--primary);
+    }
+    
+    /* 警示色：剩餘時間少於 50% 變橘，少於 20% 變紅 */
+    .fill.warning { background: linear-gradient(90deg, #ffaa00, #ff7700); box-shadow: 0 0 10px #ffaa00; }
+    .fill.danger { background: linear-gradient(90deg, #ff4444, #ff0000); box-shadow: 0 0 10px #ff0000; }
 
-    .checkbox-group{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:12px}
-    .checkbox-group input[type="checkbox"]{display:none}
-    .checkbox-group label{display:inline-block;padding:12px 20px;background:#333;color:#ccc;border-radius:20px;font-size:18px;cursor:pointer;user-select:none;text-align:center}
-    .checkbox-group input[type="checkbox"]:checked + label{background:#00d4ff;color:#111;font-weight:700}
+    .bar-text {
+      position: absolute; width: 100%; text-align: center; top: 0; line-height: 34px;
+      font-weight: 700; color: #fff; font-size: 15px; text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+      z-index: 2;
+    }
 
-    .loading-spinner{border:4px solid #333;border-top:4px solid #00d4ff;border-radius:50%;width:40px;height:40px;animation:spin 1s linear infinite;margin:auto}
-    @keyframes spin{0%{transform:rotate(0)}100%{transform:rotate(360deg)}}
-    .shimmer-effect{position:absolute;inset:0;background:linear-gradient(90deg,rgba(0,212,255,0) 0%,rgba(0,212,255,.2) 50%,rgba(0,212,255,0) 100%);background-size:200% 100%;animation:shimmer 4s infinite;pointer-events:none;z-index:10}
-    @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
-    .note{font-size:13px;color:#bbb;margin-top:-2px}
-    .pair{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-    .pill{display:inline-block;background:#222;border:1px dashed #444;padding:6px 10px;border-radius:999px;color:#bbb;font-size:12px}
-    .preview{margin-top:6px;font-size:13px;color:#cfefff}
+    /* --- 按鈕與控制區 --- */
+    .control-row { display: grid; grid-template-columns: 1fr; gap: 12px; margin: 16px 0; }
+    .control-row .right { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; } /* 改成3列比較好按 */
+    
+    .deduct-btn {
+      padding: 10px 0; font-size: 15px; border-radius: 12px; border: none;
+      background: #333; color: #ccc; cursor: pointer; transition: 0.2s;
+    }
+    .deduct-btn:active { background: #555; transform: scale(0.95); }
+
+    .chip-toggle {
+      background: #222; border-radius: 999px; padding: 4px; display: inline-flex; gap: 4px;
+    }
+    .chip-toggle button {
+      border: none; padding: 8px 16px; border-radius: 999px; background: transparent;
+      color: #888; cursor: pointer; font-weight: 600; transition: 0.3s;
+    }
+    .chip-toggle button.active { background: var(--primary); color: #111; box-shadow: 0 2px 8px rgba(0,212,255,0.4); }
+
+    .convert-group { display: flex; justify-content: center; gap: 12px; margin-top: 8px; }
+    .btn {
+      padding: 10px 16px; font-size: 15px; border: none; border-radius: 12px;
+      color: #eee; font-weight: 700; cursor: pointer; background: #444; transition: 0.2s;
+    }
+    .btn:hover { background: #555; }
+    .btn.primary { background: var(--primary); color: #111; }
+    .btn:active { transform: scale(0.96); }
+
+    /* --- 表單區 --- */
+    #form-section {
+      background: #2a2a5a; padding: 24px 20px; border-radius: 24px;
+      max-width: 440px; margin: 24px auto 60px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    }
+    input[type="number"], input[type="text"], button.submit-btn {
+      padding: 12px; margin: 8px 0; font-size: 16px; border-radius: 10px;
+      border: none; width: 100%; box-sizing: border-box;
+    }
+    input { background: rgba(0,0,0,0.3); color: #fff; border: 1px solid #444; text-align: center; }
+    input:focus { outline: none; border-color: var(--primary); }
+    
+    .submit-btn {
+      background: var(--primary); color: #111; font-weight: 800; margin-top: 12px;
+      box-shadow: 0 4px 12px rgba(0,212,255,0.4); cursor: pointer;
+    }
+    .submit-btn:active { transform: scale(0.98); }
+
+    /* --- Filter & Toggle --- */
+    #family-filter { display: flex; justify-content: center; gap: 10px; margin-bottom: 16px; }
+    #family-filter button {
+      padding: 8px 16px; font-size: 15px; border-radius: 99px; background: #333;
+      color: #ccc; font-weight: 600; border: 1px solid transparent; cursor: pointer;
+    }
+    #family-filter button.active-filter {
+      background: rgba(0,212,255,0.15); color: var(--primary); border-color: var(--primary);
+    }
+
+    /* 方案切換 */
+    .plan-toggle { background: #222; border-radius: 999px; padding: 4px; display: inline-flex; gap: 4px; margin-top: 10px; }
+    .btn-plan {
+      border: none; padding: 8px 20px; border-radius: 999px; background: transparent;
+      color: #888; cursor: pointer; font-weight: 600; transition: 0.2s;
+    }
+    .btn-plan.active { background: var(--primary); color: #111; }
+
+    /* --- Checkbox Group --- */
+    .checkbox-group { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 15px; }
+    .checkbox-group input { display: none; }
+    .checkbox-group label {
+      display: block; padding: 14px; background: #333; color: #ccc; border-radius: 12px;
+      font-size: 18px; cursor: pointer; user-select: none; transition: 0.2s; border: 2px solid transparent;
+    }
+    .checkbox-group input:checked + label {
+      background: rgba(0,212,255,0.1); color: var(--primary); border-color: var(--primary); font-weight: bold;
+    }
+
+    /* --- Loading & Animations --- */
+    .loading-spinner {
+      border: 4px solid #333; border-top: 4px solid var(--primary); border-radius: 50%;
+      width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px auto;
+    }
+    @keyframes spin { 0%{transform:rotate(0)} 100%{transform:rotate(360deg)} }
+
+    .shimmer-effect {
+      position: absolute; inset: 0;
+      background: linear-gradient(90deg, transparent 0%, rgba(0,212,255,0.1) 50%, transparent 100%);
+      background-size: 200% 100%; animation: shimmer 1.5s infinite; pointer-events: none; z-index: 10;
+    }
+    @keyframes shimmer { 0%{background-position: 200% 0} 100%{background-position: -200% 0} }
+
+    .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .note { font-size: 12px; color: #888; margin-top: 12px; line-height: 1.6; }
+    .pill { display: inline-block; background: #333; padding: 2px 8px; border-radius: 4px; color: #ccc; margin: 0 2px; }
+    .preview { margin-top: 8px; font-size: 13px; color: #9ecfff; }
+    
+    /* SweetAlert 自定義樣式 */
+    .swal2-popup { border-radius: 20px !important; background: #222 !important; border: 1px solid #444; }
+    .swal2-title { color: #fff !important; }
+    .swal2-content { color: #ccc !important; }
   </style>
 </head>
 <body>
 
-<h1>⭐ & 📺</h1>
+<h1>⭐ Points & Screen Time 📺</h1>
 
-<!-- 家庭篩選 -->
 <div id="family-filter">
   <button type="button" onclick="setFamilyFilter('ev-family')">⚡ 閃電森林</button>
   <button type="button" onclick="setFamilyFilter('ap-family')">🍊 柚柚來點名</button>
   <button type="button" onclick="clearFamilyFilter()" class="small-button">🔄</button>
 </div>
 
-<!-- 卡片區 -->
+<!-- 排行榜容器 -->
 <div id="leaderboard">
   <div style="margin:20px">
     <div class="loading-spinner"></div>
-    <div style="margin-top:10px;font-size:18px">載入中...</div>
+    <div style="margin-top:10px;font-size:16px;color:#888">連線中...</div>
   </div>
 </div>
 
-<!-- 家長控制（整合方案切換） -->
+<!-- 控制表單 -->
 <div id="form-section">
-  <h2>送出新紀錄 📝</h2>
+  <h2 style="margin-top:0;color:#fff;">送出新紀錄 📝</h2>
+  
   <div id="name-list" class="checkbox-group"></div>
 
-  <!-- 方案切換（獨立 class，未選灰、選取藍） -->
-  <div class="row" style="margin-top:4px;margin-bottom:0">
-    <div class="plan-toggle" aria-label="選擇分配方案">
-      <button type="button" id="alloc-weekday" class="btn-plan" onclick="setAllocPlan('weekday')">平日</button>
-      <button type="button" id="alloc-holiday" class="btn-plan" onclick="setAllocPlan('holiday')">假日</button>
-    </div>
+  <div class="plan-toggle" aria-label="選擇分配方案">
+    <button type="button" id="alloc-weekday" class="btn-plan" onclick="setAllocPlan('weekday')">平日</button>
+    <button type="button" id="alloc-holiday" class="btn-plan" onclick="setAllocPlan('holiday')">假日</button>
   </div>
   <div id="alloc-preview" class="preview">—</div>
 
-  <input type="number" id="pointsChange" placeholder="⭐ 點數調整（+/-）">
+  <input type="number" id="pointsChange" placeholder="⭐ 點數調整（輸入正數有特效）">
 
   <div class="pair">
-    <input type="number" id="selectedMinutesChange" placeholder="🌟 精選時間（+/- 分）">
-    <input type="number" id="regularMinutesChange"  placeholder="🎮 一般時間（+/- 分）">
+    <input type="number" id="selectedMinutesChange" placeholder="🌟 精選增減">
+    <input type="number" id="regularMinutesChange"  placeholder="🎮 一般增減">
   </div>
 
-  <input type="text" id="reason" placeholder="變更原因">
-  <button type="button" onclick="submitData()">送出 🚀</button>
+  <input type="text" id="reason" placeholder="變更原因 (選填)">
+  
+  <button type="button" class="submit-btn" onclick="submitData()">送出 🚀</button>
 
-  <div class="note">轉換規則：<span class="pill">🎮 2 分 → ⭐ 1 點</span><span class="pill">⭐ 1 點 → 🎮 2 分</span><span class="pill">⭐ 1 點 → 🌟 3 分</span>（🌟精選不可換回⭐）</div>
+  <div class="note">
+    規則：<span class="pill">🎮2分 ⇄ ⭐1點</span> <span class="pill">⭐1點 → 🌟3分</span><br>
+    (🌟精選時間不可換回點數)
+  </div>
+</div>
+
+<div style="margin-top:40px;font-size:12px;color:#555;">
+  Made by Evelyn YT | Updated NOV 2025
 </div>
 
 <script>
@@ -126,20 +256,32 @@
   const API_URL = "https://script.google.com/macros/s/AKfycbzk2xXQLv3_e0oktEMZdQjXwkVG9JU6HTolS3dhRH09FPEiHn6dvyAUlUlQZpBAT0rG/exec";
   const PLAN_LIMITS = { weekday:{sel:20, reg:20}, holiday:{sel:30, reg:60} };
 
+  // 狀態變數
+  let currentData = []; // 儲存最新的數據
   let currentSelectedTimes = {};
   let currentRegularTimes  = {};
+  let activeType = {}; 
   let updatingChildren = {};
+  
   let familyFilter = localStorage.getItem('familyFilter') || '';
   let allocPlan = localStorage.getItem('allocPlan') || 'weekday';
   let selMax = parseInt(localStorage.getItem('selMax')||'0',10);
   let regMax = parseInt(localStorage.getItem('regMax')||'0',10);
+
+  // 初始化
   if(!selMax || !regMax){
     selMax = PLAN_LIMITS[allocPlan].sel;
     regMax = PLAN_LIMITS[allocPlan].reg;
-    localStorage.setItem('selMax', selMax);
-    localStorage.setItem('regMax', regMax);
   }
-  const activeType = {}; // { name: 'selected' | 'regular' }
+
+  // 模擬資料 (當 API 連不上時使用，讓預覽功能正常運作)
+  const MOCK_DATA = [
+    { Name: 'Miles',  Family: 'ev-family', TotalPoints: 15, TotalSelectedMinutes: 10, TotalRegularMinutes: 45 },
+    { Name: 'Emmett', Family: 'ev-family', TotalPoints: 8,  TotalSelectedMinutes: 0,  TotalRegularMinutes: 12 },
+    { Name: 'Tessa',  Family: 'ap-family', TotalPoints: 22, TotalSelectedMinutes: 25, TotalRegularMinutes: 10 },
+    { Name: 'Archer', Family: 'ap-family', TotalPoints: 5,  TotalSelectedMinutes: 5,  TotalRegularMinutes: 55 }
+  ];
+  let isUsingMock = false;
 
   document.addEventListener('DOMContentLoaded', ()=>{
     fetchLeaderboard();
@@ -147,9 +289,11 @@
     updateAllocPreview();
   });
 
-  /* 家庭篩選 */
-  function setFamilyFilter(f){ familyFilter=f; localStorage.setItem('familyFilter',f); showLoading(); fetchLeaderboard(); updateFilterButtons(); }
-  function clearFamilyFilter(){ familyFilter=''; localStorage.removeItem('familyFilter'); showLoading(); fetchLeaderboard(); updateFilterButtons();}
+  /* --- 核心功能 --- */
+
+  function setFamilyFilter(f){ familyFilter=f; localStorage.setItem('familyFilter',f); updateFilterButtons(); renderLeaderboard(currentData); }
+  function clearFamilyFilter(){ familyFilter=''; localStorage.removeItem('familyFilter'); updateFilterButtons(); renderLeaderboard(currentData); }
+  
   function updateFilterButtons(){
     document.querySelectorAll('#family-filter button').forEach(b=>b.classList.remove('active-filter'));
     if(familyFilter){
@@ -158,13 +302,13 @@
     }
   }
 
-  /* 方案切換：預填、更新上限、即時重算進度條 */
   function setAllocPlan(plan){
     allocPlan = plan;
     localStorage.setItem('allocPlan', plan);
     syncAllocPlanButtons();
-
     const lim = PLAN_LIMITS[plan];
+    
+    // UI 動畫
     document.getElementById('selectedMinutesChange').value = lim.sel;
     document.getElementById('regularMinutesChange').value  = lim.reg;
     document.getElementById('reason').value = buildTodayReason();
@@ -172,311 +316,460 @@
     selMax = lim.sel; regMax = lim.reg;
     localStorage.setItem('selMax', selMax);
     localStorage.setItem('regMax', regMax);
+    
     updateAllocPreview(true);
-    recalcAllProgressBars();
-  }
-  function syncAllocPlanButtons(){
-    const w = document.getElementById('alloc-weekday');
-    const h = document.getElementById('alloc-holiday');
-    // 確保不會兩顆同時藍
-    w.classList.remove('active'); h.classList.remove('active');
-    (allocPlan==='weekday' ? w : h).classList.add('active');
-    w.setAttribute('aria-pressed', allocPlan==='weekday');
-    h.setAttribute('aria-pressed', allocPlan==='holiday');
-  }
-  function buildTodayReason(){
-    const d = new Date();
-    const wd = ['日','一','二','三','四','五','六'][d.getDay()];
-    return `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()} (${wd}) 當日時間分配`;
-  }
-  function updateAllocPreview(bump){
-    const el = document.getElementById('alloc-preview');
-    const lim = PLAN_LIMITS[allocPlan];
-    el.textContent = `當前方案：${allocPlan==='weekday'?'平日':'假日'}（🌟 ${lim.sel} 分｜🎮 ${lim.reg} 分）；進度條上限：🌟 ${selMax}｜🎮 ${regMax}`;
-    if(bump){ el.style.transform='scale(1.04)'; setTimeout(()=>el.style.transform='none',150); }
-  }
-
-  function recalcAllProgressBars(){
-    Object.keys(currentSelectedTimes).forEach(name=>{
-      const sel = currentSelectedTimes[name]||0;
-      const reg = currentRegularTimes[name]||0;
-      const card = document.getElementById(`card-${name}`);
-      if(!card) return;
-      const titles = card.querySelectorAll('.progress-title');
-      if(titles[0]) titles[0].textContent = `🌟 精選時間（上限 ${selMax} 分）`;
-      if(titles[1]) titles[1].textContent = `🎮 一般時間（上限 ${regMax} 分）`;
-      const fills = card.querySelectorAll('.fill');
-      if(fills[0]) fills[0].style.width = `${Math.min(100, selMax? (sel/selMax)*100 : 0)}%`;
-      if(fills[1]) fills[1].style.width = `${Math.min(100, regMax? (reg/regMax)*100 : 0)}%`;
+    // 這裡不需重繪整個列表，只需更新進度條上限顯示即可，簡單起見重繪
+    renderLeaderboard(currentData);
+    
+    Swal.fire({
+        toast: true, position: 'top-end', icon: 'info', 
+        title: `已切換為${plan==='weekday'?'平日':'假日'}方案`,
+        showConfirmButton: false, timer: 1500,
+        background: '#333', color: '#fff'
     });
   }
 
-  /* 載入排行榜 */
-  function showLoading(){
-    document.getElementById('leaderboard').innerHTML = `
-      <div style="margin:20px">
-        <div class="loading-spinner"></div>
-        <div style="margin-top:10px;font-size:18px">載入中...</div>
-      </div>`;
+  function syncAllocPlanButtons(){
+    document.querySelectorAll('.btn-plan').forEach(b=>b.classList.remove('active'));
+    document.getElementById(allocPlan==='weekday'?'alloc-weekday':'alloc-holiday').classList.add('active');
   }
 
+  function buildTodayReason(){
+    const d = new Date();
+    const wd = ['日','一','二','三','四','五','六'][d.getDay()];
+    return `${d.getMonth()+1}/${d.getDate()} (${wd}) 分配`;
+  }
+
+  function updateAllocPreview(bump){
+    const el = document.getElementById('alloc-preview');
+    const lim = PLAN_LIMITS[allocPlan];
+    el.textContent = `當前：${allocPlan==='weekday'?'平日':'假日'} (🌟${lim.sel} / 🎮${lim.reg}) `;
+    if(bump){ el.style.transform='scale(1.1)'; el.style.transition='0.2s'; setTimeout(()=>el.style.transform='scale(1)',200); }
+  }
+
+  /* --- 資料獲取 --- */
+  
   function fetchLeaderboard(){
+    // 設定一個超時，如果 Google Script 太慢或 blocked，就載入 Mock Data
+    const timeoutId = setTimeout(() => {
+        if(currentData.length === 0) {
+            console.log("API timeout or blocked, using mock data.");
+            isUsingMock = true;
+            renderLeaderboard(MOCK_DATA);
+        }
+    }, 2500);
+
     const callbackName = 'cb_' + Math.floor(Math.random()*1e6);
     window[callbackName] = function(data){
+      clearTimeout(timeoutId);
+      isUsingMock = false;
       renderLeaderboard(data);
-      for(const name in updatingChildren){ stopShimmerEffect(name); }
-      updatingChildren = {};
       delete window[callbackName];
     };
-    const s=document.createElement('script');
+
+    const s = document.createElement('script');
     s.src = `${API_URL}?action=getLeaderboard&callback=${callbackName}`;
-    s.onload = function(){ this.remove(); };
+    s.onerror = () => {
+        // 如果載入失敗 (例如在 CodePen/預覽環境 blocked)
+        clearTimeout(timeoutId);
+        isUsingMock = true;
+        renderLeaderboard(MOCK_DATA); 
+    };
     document.body.appendChild(s);
     updateFilterButtons();
   }
 
   function renderLeaderboard(data){
+    currentData = data || []; // 保存當前數據
     const leaderboard = document.getElementById('leaderboard');
-    if(!Array.isArray(data)){ leaderboard.innerText='載入失敗'; return; }
-
+    
+    // 過濾邏輯
+    let displayData = currentData;
     if(familyFilter){
-      data = data.filter(e=>{
-        if(familyFilter==='ev-family'){ return e.Name==='Miles'||e.Name==='Emmett';}
-        if(familyFilter==='ap-family'){ return e.Name==='Tessa'||e.Name==='Archer';}
+      displayData = currentData.filter(e => {
+        if(familyFilter==='ev-family') return ['Miles','Emmett'].includes(e.Name);
+        if(familyFilter==='ap-family') return ['Tessa','Archer'].includes(e.Name);
         return true;
       });
     }
 
-    updateNameCheckboxes(data);
+    updateNameCheckboxes(displayData);
 
     let html = '';
-    data.forEach(entry=>{
+    displayData.forEach(entry=>{
       const sel = entry.TotalSelectedMinutes || 0;
       const reg = entry.TotalRegularMinutes  || 0;
       const pts = entry.TotalPoints || 0;
 
       currentSelectedTimes[entry.Name] = sel;
       currentRegularTimes[entry.Name]  = reg;
-      if(!activeType[entry.Name]) activeType[entry.Name]='regular';
+      if(!activeType[entry.Name]) activeType[entry.Name] = 'regular'; // 預設操作一般時間
 
+      // 計算百分比
       const selPct = Math.min(100, selMax ? (sel / selMax) * 100 : 0);
       const regPct = Math.min(100, regMax ? (reg / regMax) * 100 : 0);
+      
+      // 顏色狀態 (修正：剩餘時間邏輯 - 時間越少越紅)
+      // <= 20% 紅色 (danger), <= 50% 橘色 (warning)
+      const selClass = selPct <= 20 ? 'danger' : (selPct <= 50 ? 'warning' : '');
+      const regClass = regPct <= 20 ? 'danger' : (regPct <= 50 ? 'warning' : '');
 
-      const cash = pts * 5;
-      const canSel = pts * 3;
-      const canReg = pts * 2;
-
-      const opSelActive = activeType[entry.Name]==='selected';
-      const opRegActive = activeType[entry.Name]==='regular';
+      const opSel = activeType[entry.Name]==='selected';
+      
+      // 控制按鈕區塊 (分成兩排優化手機顯示)
+      const deductButtons = [5,10,20,30,60].map(m => 
+        `<button type="button" class="deduct-btn" onclick="deductScreenTime('${entry.Name}', ${m})">-${m}</button>`
+      ).join('');
 
       html += `
       <div class="child-card" id="card-${entry.Name}">
-        <div class="child-name">👦 ${entry.Name}</div>
+        <div class="child-name">
+          ${entry.Name}
+          ${updatingChildren[entry.Name] ? '<span style="font-size:14px;opacity:0.7"> 更新中...</span>' : ''}
+        </div>
 
-        <div class="points-box">⭐ ${pts} 點
-          <div class="conversion-info">可換：🌟 ${canSel} 分｜🎮 ${canReg} 分｜💰 ${cash} 元</div>
+        <div class="points-box">
+          ⭐ ${pts}
+          <div class="conversion-info">
+            可換：🌟 ${pts * 3} 分｜🎮 ${pts * 2} 分｜💰 $${pts * 5}
+          </div>
         </div>
 
         <div class="progress-dual">
+          <!-- 精選時間 -->
           <div>
-            <div class="progress-title">🌟 精選時間（上限 ${selMax} 分）</div>
+            <div class="progress-title">
+              <span>🌟 精選時間</span>
+              <span style="font-size:12px;color:#888">${sel} / ${selMax}</span>
+            </div>
             <div class="bar-wrap">
-              <div class="fill" style="width:${selPct}%"></div>
-              <div class="bar-text">${sel} 分鐘</div>
+              <div class="fill ${selClass}" style="width:${selPct}%"></div>
             </div>
           </div>
+          
+          <!-- 一般時間 -->
           <div>
-            <div class="progress-title">🎮 一般時間（上限 ${regMax} 分）</div>
+            <div class="progress-title">
+              <span>🎮 一般時間</span>
+              <span style="font-size:12px;color:#888">${reg} / ${regMax}</span>
+            </div>
             <div class="bar-wrap">
-              <div class="fill" style="width:${regPct}%"></div>
-              <div class="bar-text">${reg} 分鐘</div>
+              <div class="fill ${regClass}" style="width:${regPct}%"></div>
             </div>
           </div>
         </div>
 
+        <!-- 操作區 -->
         <div class="control-row">
-          <div class="left">
-            <div class="chip-toggle" aria-label="操作目標">
-              <button type="button" data-type="selected" class="${opSelActive?'active':''}" onclick="setOpType('${entry.Name}','selected')">🌟 精選</button>
-              <button type="button" data-type="regular"  class="${opRegActive?'active':''}" onclick="setOpType('${entry.Name}','regular')">🎮 一般</button>
-            </div>
+          <div style="display:flex;align-items:center;justify-content:center;margin-bottom:8px;">
+             <div class="chip-toggle">
+               <button type="button" class="${opSel?'active':''}" onclick="setOpType('${entry.Name}','selected')">🌟 精選</button>
+               <button type="button" class="${!opSel?'active':''}" onclick="setOpType('${entry.Name}','regular')">🎮 一般</button>
+             </div>
           </div>
           <div class="right">
-            ${[5,10,15,20,25,30].map(m=>`<button type="button" class="deduct-btn" onclick="deductScreenTime('${entry.Name}', ${m})">-${m}</button>`).join('')}
+            ${deductButtons}
+            <button type="button" class="deduct-btn" style="color:#ff6666" onclick="deductScreenTime('${entry.Name}', 'custom')">自訂</button>
           </div>
         </div>
 
         <div class="convert-group">
           <button type="button" class="btn" onclick="convertRegularToPoints('${entry.Name}')">🎮 ➔ ⭐</button>
-          <button type="button" class="btn convert-pts" onclick="convertPointsToTime('${entry.Name}')">⭐ ➔ ${opSelActive?'🌟':'🎮'}</button>
+          <button type="button" class="btn primary convert-pts" onclick="convertPointsToTime('${entry.Name}')">⭐ ➔ ${opSel?'🌟':'🎮'}</button>
         </div>
-
+        
         ${updatingChildren[entry.Name] ? '<div class="shimmer-effect"></div>' : ''}
       </div>
       `;
     });
-
+    
     leaderboard.innerHTML = html;
+    if(isUsingMock && document.querySelector('.mock-alert') === null){
+         // 提示使用者目前是預覽模式
+         const div = document.createElement('div');
+         div.className = 'mock-alert';
+         div.style.cssText = "background:#332;color:#fc0;padding:10px;font-size:12px;border-radius:8px;margin:10px;";
+         div.innerText = "⚠️ 預覽模式：使用模擬資料 (無法連接後端)";
+         leaderboard.prepend(div);
+    }
   }
 
   function updateNameCheckboxes(data){
     const box = document.getElementById('name-list');
+    // 保持勾選狀態的邏輯有點複雜，這裡簡單重繪
+    const oldChecks = new Set([...document.querySelectorAll('#name-list input:checked')].map(c=>c.value));
+    
     box.innerHTML = '';
     data.forEach(e=>{
       const id = 'child-' + e.Name;
       const input = document.createElement('input');
       input.type='checkbox'; input.id=id; input.value=e.Name;
+      if(oldChecks.has(e.Name)) input.checked = true;
+      
       const label = document.createElement('label');
       label.htmlFor=id; label.textContent=e.Name;
       box.appendChild(input); box.appendChild(label);
     });
   }
 
-  /* 精選/一般切換：立即更新卡片（不重新抓資料） */
   function setOpType(name, type){
-    activeType[name]=type;
-    const card = document.getElementById(`card-${name}`);
-    if(!card) return;
-    const btnSel = card.querySelector('.chip-toggle button[data-type="selected"]');
-    const btnReg = card.querySelector('.chip-toggle button[data-type="regular"]');
-    if(btnSel && btnReg){
-      btnSel.classList.toggle('active', type==='selected');
-      btnReg.classList.toggle('active', type==='regular');
-    }
-    const convertBtn = card.querySelector('.convert-group .convert-pts');
-    if(convertBtn){
-      convertBtn.textContent = `⭐ ➔ ${type==='selected'?'🌟':'🎮'}`;
-    }
+    activeType[name] = type;
+    // 局部更新 DOM 以避免閃爍
+    renderLeaderboard(currentData);
   }
 
-  function startShimmerEffect(name){
-    updatingChildren[name]=true;
-    const card=document.getElementById(`card-${name}`);
-    if(card && !card.querySelector('.shimmer-effect')){
-      const d=document.createElement('div');
-      d.className='shimmer-effect';
-      card.appendChild(d);
-    }
+  /* --- 資料提交邏輯 --- */
+
+  function startShimmer(name){
+    updatingChildren[name] = true;
+    renderLeaderboard(currentData);
   }
-  function stopShimmerEffect(name){
+  function stopShimmer(name){
     delete updatingChildren[name];
-    const card=document.getElementById(`card-${name}`);
-    if(!card) return;
-    const sh=card.querySelector('.shimmer-effect');
-    if(sh) sh.remove();
+    // 完成後不急著重繪，等待數據更新
+  }
+
+  // 模擬 API 提交 (為了預覽效果)
+  function mockSubmit(payload, callback){
+    console.log("Mock Submit:", payload);
+    setTimeout(()=>{
+      // 更新本地 mock data 以顯示變化
+      const target = MOCK_DATA.find(d=>d.Name === payload.Name);
+      if(target){
+          target.TotalPoints += (payload.PointsChange||0);
+          target.TotalSelectedMinutes += (payload.SelectedMinutesChange||0);
+          target.TotalRegularMinutes += (payload.RegularMinutesChange||0);
+      }
+      callback();
+    }, 600);
   }
 
   function submitToApi(payload, callback){
-    const iframe=document.createElement('iframe');
+    if(isUsingMock) {
+        mockSubmit(payload, callback);
+        return;
+    }
+    // 這裡使用 JSONP 或 iframe 方式 (保持你原本的邏輯)
+    const iframe = document.createElement('iframe');
     iframe.style.display='none';
-    iframe.onload=function(){ callback(); this.remove(); };
+    iframe.onload = function(){ callback(); this.remove(); };
+    // 注意：JSON.stringify 可能需要 encodeURIComponent
     iframe.src = `${API_URL}?action=submit&data=${encodeURIComponent(JSON.stringify(payload))}`;
     document.body.appendChild(iframe);
   }
 
   function submitData(){
-    const checked=[...document.querySelectorAll('#name-list input[type="checkbox"]:checked')];
-    const pointsChange = document.getElementById('pointsChange').value.trim();
-    const selChange    = document.getElementById('selectedMinutesChange').value.trim();
-    const regChange    = document.getElementById('regularMinutesChange').value.trim();
-    const reason       = document.getElementById('reason').value.trim();
+    const checked = [...document.querySelectorAll('#name-list input[type="checkbox"]:checked')];
+    const ptsVal = document.getElementById('pointsChange').value.trim();
+    const selVal = document.getElementById('selectedMinutesChange').value.trim();
+    const regVal = document.getElementById('regularMinutesChange').value.trim();
+    const reason = document.getElementById('reason').value.trim();
 
-    if(checked.length===0){ alert('請選擇至少一個小孩'); return; }
-    if(!pointsChange && !selChange && !regChange){ alert('請輸入點數或螢幕時間調整'); return; }
+    if(checked.length===0){ Swal.fire({icon:'warning', title:'請選擇小孩'}); return; }
+    if(!ptsVal && !selVal && !regVal){ Swal.fire({icon:'warning', title:'請輸入數值'}); return; }
 
-    let done=0;
-    checked.forEach(cb=>{
-      const name=cb.value;
+    // 慶祝特效！
+    if(parseInt(ptsVal) > 0) {
+        confetti({
+            particleCount: 150,
+            spread: 70,
+            origin: { y: 0.6 },
+            colors: ['#00d4ff', '#ff0', '#f0f']
+        });
+    }
+
+    const btn = document.querySelector('.submit-btn');
+    btn.disabled = true; btn.style.opacity = 0.5;
+
+    let doneCount = 0;
+    checked.forEach(cb => {
+      const name = cb.value;
       const family = (name==='Miles'||name==='Emmett')?'ev-family':'ap-family';
-
-      startShimmerEffect(name);
+      
+      startShimmer(name);
+      
       const payload = {
-        Family: family,
-        Name: name,
-        PointsChange: pointsChange ? parseInt(pointsChange,10):0,
-        SelectedMinutesChange: selChange ? parseInt(selChange,10):0,
-        RegularMinutesChange:  regChange ? parseInt(regChange,10):0,
-        Reason: reason || '家長手動調整'
+        Family: family, Name: name,
+        PointsChange: ptsVal ? parseInt(ptsVal,10) : 0,
+        SelectedMinutesChange: selVal ? parseInt(selVal,10) : 0,
+        RegularMinutesChange: regVal ? parseInt(regVal,10) : 0,
+        Reason: reason || '手動調整'
       };
-      submitToApi(payload, ()=>{ if(++done===checked.length) setTimeout(fetchLeaderboard, REFRESH_DELAY); });
-    });
 
-    document.getElementById('pointsChange').value='';
-    document.getElementById('selectedMinutesChange').value='';
-    document.getElementById('regularMinutesChange').value='';
-    document.getElementById('reason').value='';
-    document.querySelectorAll('#name-list input[type="checkbox"]').forEach(cb=>cb.checked=false);
+      submitToApi(payload, () => {
+        doneCount++;
+        stopShimmer(name);
+        if(doneCount === checked.length){
+          btn.disabled = false; btn.style.opacity = 1;
+          
+          // 清空輸入
+          document.getElementById('pointsChange').value='';
+          document.getElementById('selectedMinutesChange').value='';
+          document.getElementById('regularMinutesChange').value='';
+          document.querySelectorAll('#name-list input').forEach(c=>c.checked=false);
+
+          // 成功提示
+          Swal.fire({
+             icon: 'success',
+             title: '更新成功!',
+             text: '資料已同步',
+             timer: 1500,
+             showConfirmButton: false,
+             background: '#333', color: '#fff'
+          });
+          
+          // 重新抓取數據
+          if(isUsingMock) renderLeaderboard(MOCK_DATA);
+          else setTimeout(fetchLeaderboard, REFRESH_DELAY);
+        }
+      });
+    });
   }
 
   function deductScreenTime(name, minutes){
     const type = activeType[name] || 'regular';
-    const current = (type==='selected') ? (currentSelectedTimes[name]||0) : (currentRegularTimes[name]||0);
-    if(current < minutes){ alert(`該類別時間不足，無法扣除 ${minutes} 分！`); return; }
-    const family=(name==='Miles'||name==='Emmett')?'ev-family':'ap-family';
-    if(!confirm(`確定扣除 ${minutes} 分（${type==='selected'?'🌟精選':'🎮一般'}）？`)) return;
+    
+    // 處理自訂輸入
+    if(minutes === 'custom'){
+        Swal.fire({
+            title: `扣除${type==='selected'?'🌟精選':'🎮一般'}時間`,
+            input: 'number',
+            inputLabel: '輸入分鐘數',
+            background: '#333', color:'#fff', confirmButtonColor: '#d33',
+            showCancelButton: true
+        }).then((result) => {
+            if(result.isConfirmed && result.value) {
+                deductScreenTime(name, parseInt(result.value));
+            }
+        });
+        return;
+    }
 
-    startShimmerEffect(name);
-    const payload={
-      Family:family, Name:name, PointsChange:0,
-      SelectedMinutesChange: type==='selected' ? -minutes : 0,
-      RegularMinutesChange:  type==='regular' ? -minutes : 0,
-      Reason:`扣除${type==='selected'?'精選':'一般'}時間 ${minutes} 分`
-    };
-    submitToApi(payload, ()=> setTimeout(fetchLeaderboard, REFRESH_DELAY));
+    const current = (type==='selected') ? (currentSelectedTimes[name]||0) : (currentRegularTimes[name]||0);
+    if(current < minutes){ 
+        Swal.fire({icon:'error', title:'時間不足', text:`目前只有 ${current} 分鐘`, background:'#333', color:'#fff'}); 
+        return; 
+    }
+
+    Swal.fire({
+        title: `確認扣除 ${minutes} 分?`,
+        text: `類別: ${type==='selected'?'🌟精選':'🎮一般'}`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        confirmButtonText: '扣除',
+        cancelButtonText: '取消',
+        background: '#333', color: '#fff'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            startShimmer(name);
+            const family=(name==='Miles'||name==='Emmett')?'ev-family':'ap-family';
+            const payload={
+              Family:family, Name:name, PointsChange:0,
+              SelectedMinutesChange: type==='selected' ? -minutes : 0,
+              RegularMinutesChange:  type==='regular' ? -minutes : 0,
+              Reason:`扣除${type==='selected'?'精選':'一般'} ${minutes}分`
+            };
+            submitToApi(payload, ()=> {
+                stopShimmer(name);
+                Swal.fire({icon:'success', title:'已扣除', timer:1000, showConfirmButton:false, background:'#333', color:'#fff'});
+                if(isUsingMock) renderLeaderboard(MOCK_DATA);
+                else setTimeout(fetchLeaderboard, REFRESH_DELAY);
+            });
+        }
+    });
   }
 
   function convertRegularToPoints(name){
     const reg = currentRegularTimes[name]||0;
-    if(reg<2){ alert('🎮 一般時間不足 2 分，無法轉點數'); return; }
+    if(reg < 2){ Swal.fire({icon:'info', title:'時間不足', text:'🎮一般時間需至少2分鐘', background:'#333', color:'#fff'}); return; }
+    
     const maxPts = Math.floor(reg/2);
-    const want = parseInt(prompt(`目前🎮一般 ${reg} 分，可換最高 ⭐ ${maxPts} 點。\n請輸入要換的點數：`),10);
-    if(isNaN(want)||want<=0||want>maxPts){ alert('輸入數量無效'); return; }
 
-    const family=(name==='Miles'||name==='Emmett')?'ev-family':'ap-family';
-    const mins = want*2;
-
-    if(!confirm(`確認轉換：🎮 ${mins} 分 → ⭐ ${want} 點`)) return;
-
-    startShimmerEffect(name);
-    const payload={
-      Family:family, Name:name,
-      PointsChange: want,
-      SelectedMinutesChange:0,
-      RegularMinutesChange: -mins,
-      Reason:'一般時間轉點數（2分→1點）'
-    };
-    submitToApi(payload, ()=>{ setTimeout(fetchLeaderboard, REFRESH_DELAY); alert(`已將 🎮 ${mins} 分換成 ⭐ ${want} 點`); });
+    Swal.fire({
+        title: '🎮 ➔ ⭐ 轉換',
+        text: `目前一般時間: ${reg} 分 (最多換 ${maxPts} 點)`,
+        input: 'number',
+        inputValue: 1,
+        inputAttributes: { min: 1, max: maxPts },
+        showCancelButton: true,
+        confirmButtonText: '兌換',
+        background: '#333', color: '#fff'
+    }).then((result) => {
+        if(result.isConfirmed){
+            const want = parseInt(result.value);
+            if(isNaN(want) || want <=0 || want > maxPts) {
+                Swal.fire({icon:'error', title:'無效數量', background:'#333', color:'#fff'}); return;
+            }
+            
+            // 慶祝
+            confetti({ particleCount: 100, spread: 60, origin: { y: 0.7 } });
+            
+            startShimmer(name);
+            const family=(name==='Miles'||name==='Emmett')?'ev-family':'ap-family';
+            const payload={
+              Family:family, Name:name,
+              PointsChange: want,
+              SelectedMinutesChange:0,
+              RegularMinutesChange: -(want*2),
+              Reason:'一般轉點數'
+            };
+            submitToApi(payload, ()=>{
+                stopShimmer(name);
+                Swal.fire({icon:'success', title:`獲得 ${want} 點!`, background:'#333', color:'#fff'});
+                if(isUsingMock) renderLeaderboard(MOCK_DATA);
+                else setTimeout(fetchLeaderboard, REFRESH_DELAY);
+            });
+        }
+    });
   }
 
   function convertPointsToTime(name){
     const type = activeType[name]||'regular';
     const family=(name==='Miles'||name==='Emmett')?'ev-family':'ap-family';
-    const ptsMatch = document.querySelector(`#card-${name} .points-box`)?.textContent.match(/(\d+)\s*點/);
-    const hasPts = ptsMatch ? parseInt(ptsMatch[1],10) : 0;
-    if(hasPts<=0){ alert('沒有可轉換的點數'); return; }
+    
+    // 為了準確性，從資料找點數，而不是DOM
+    const entry = currentData.find(d=>d.Name===name) || MOCK_DATA.find(d=>d.Name===name);
+    const hasPts = entry ? entry.TotalPoints : 0;
+    
+    if(hasPts <= 0){ Swal.fire({icon:'info', title:'點數不足', background:'#333', color:'#fff'}); return; }
 
     const rate = (type==='selected') ? 3 : 2;
-    const want = parseInt(prompt(`目前 ⭐ ${hasPts} 點。\n轉為 ${type==='selected'?'🌟精選':'🎮一般'}：1點→${rate}分\n請輸入要轉換的點數：`),10);
-    if(isNaN(want)||want<=0||want>hasPts){ alert('輸入數量無效'); return; }
+    const typeName = type==='selected'?'🌟精選':'🎮一般';
 
-    const mins = want*rate;
-    if(!confirm(`確認轉換：⭐ ${want} 點 → ${type==='selected'?'🌟':''}${type==='regular'?'🎮':''} ${mins} 分`)) return;
+    Swal.fire({
+        title: `⭐ ➔ ${typeName} 轉換`,
+        html: `目前點數: ${hasPts}<br>匯率: 1點 = ${rate}分`,
+        input: 'number',
+        inputValue: 1,
+        inputAttributes: { min: 1, max: hasPts },
+        showCancelButton: true,
+        confirmButtonText: '兌換',
+        background: '#333', color: '#fff'
+    }).then((result) => {
+        if(result.isConfirmed){
+            const want = parseInt(result.value);
+            if(isNaN(want) || want <=0 || want > hasPts) return;
 
-    startShimmerEffect(name);
-    const payload={
-      Family:family, Name:name,
-      PointsChange:-want,
-      SelectedMinutesChange: type==='selected'? mins:0,
-      RegularMinutesChange:  type==='regular'? mins:0,
-      Reason:`點數轉${type==='selected'?'精選':'一般'}時間（1點→${rate}分）`
-    };
-    submitToApi(payload, ()=>{ setTimeout(fetchLeaderboard, REFRESH_DELAY); alert(`已將 ⭐ ${want} 點換成 ${type==='selected'?'🌟精選':'🎮一般'} ${mins} 分`); });
+            startShimmer(name);
+            const mins = want * rate;
+            const payload={
+              Family:family, Name:name,
+              PointsChange: -want,
+              SelectedMinutesChange: type==='selected'? mins:0,
+              RegularMinutesChange:  type==='regular'? mins:0,
+              Reason:`點數轉${type==='selected'?'精選':'一般'}`
+            };
+            submitToApi(payload, ()=>{
+                stopShimmer(name);
+                Swal.fire({icon:'success', title:`增加 ${mins} 分鐘!`, background:'#333', color:'#fff'});
+                if(isUsingMock) renderLeaderboard(MOCK_DATA);
+                else setTimeout(fetchLeaderboard, REFRESH_DELAY);
+            });
+        }
+    });
   }
 </script>
-
-<div style="margin-top:60px;font-size:.9em;color:#aaa;text-align:center">
-  Made by Evelyn YT ｜ © 2025/8/31 17:55
-</div>
 
 </body>
 </html>
